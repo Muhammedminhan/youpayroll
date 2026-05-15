@@ -9,8 +9,8 @@ logger = logging.getLogger(__name__)
 def update_payee_acknowledgement(sender, instance, created, **kwargs):
     if created and instance.is_approved:
         payee = instance.payee
-        # Use filter().last() to avoid MultipleObjectsReturned if multiple bank details exist
-        bank_details = BankDetails.objects.filter(payee=payee).last()
+        # Use filter().order_by('-id').last() or first() to be deterministic
+        bank_details = BankDetails.objects.filter(payee=payee).order_by('-id').first()
         if bank_details:
             bank_details.payee_acknowledgement = True
             bank_details.save(update_fields=['payee_acknowledgement'])

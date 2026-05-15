@@ -52,6 +52,12 @@ class PayRunForm(forms.ModelForm):
                 self.fields['month'].widget.attrs['readonly'] = 'readonly'
                 self.fields['year'].widget.attrs['readonly'] = 'readonly'
 
+            else:
+                # Default for other statuses (DUE, IN_PROGRESS, COMPLETED)
+                # Allow editing but suggest next period
+                self.fields['month'].initial = next_month
+                self.fields['year'].initial = next_year
+
         else:
             # First-ever PayRun: autofill current month/year and allow editing
             current_date = datetime.date.today()

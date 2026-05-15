@@ -1,4 +1,3 @@
-import os
 from decouple import config
 from django.core.management.base import BaseCommand
 from zohopeople.constants import (GRANT_TYPE, ZP_API_REDIR_URI,
@@ -47,7 +46,7 @@ class Command(BaseCommand):
     help = "Creates refresh tokens"
 
     def add_arguments(self, parser):
-        parser.add_argument("--grant-token", type=str, help="OAuth grant token (optional, can use ZOHO_GRANT_TOKEN env var)")
+        parser.add_argument("--grant-token", type=str, help="OAuth grant token")
 
     def handle(self, *args, **options):
         grant_token = options.get("grant_token")

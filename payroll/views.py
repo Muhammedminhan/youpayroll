@@ -6,6 +6,9 @@ class PayRunViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAdminUser]
     serializer_class = PayRunSerializer
     queryset = PayRun.objects.all()
+    
+    def perform_create(self, serializer):
+        serializer.save(created_by=self.request.user)
 
 class PaymentViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
@@ -27,6 +30,10 @@ class Form16ViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAdminUser]
     serializer_class = Form16Serializer
     queryset = Form16.objects.all()
+
+    def perform_create(self, serializer):
+        # Assuming Form16 model might need created_by as well for consistency
+        serializer.save()
 
 class Form16EntryViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [permissions.IsAuthenticated]

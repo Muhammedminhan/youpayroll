@@ -15,5 +15,6 @@ class HealthCheck(View):
                 cursor.execute("SELECT 1")
             return HttpResponse("OK", status=200)
         except Exception as e:
-            logger.exception("Health check failed: database connection error")
+            # Redact DSN info by logging only the message
+            logger.error(f"Health check failed: {str(e)}")
             return HttpResponse("Service Unavailable", status=503)

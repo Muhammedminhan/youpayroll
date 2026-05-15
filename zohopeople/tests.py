@@ -23,6 +23,44 @@ class ZohoUtilsTest(TestCase):
         token_obj = ZohoPeopleFormToken.objects.latest('created')
         self.assertEqual(token_obj.access_token, "new_access")
 
+    def test_generate_access_token_multi_row_ordering(self):
+        # Create an older row with a refresh token and a newer row WITHOUT a refresh token
+        # The code should pick the row with the refresh token regardless of 'created' timestamp
+        # if filter(refresh_token__isnull=False) is used.
+        ZohoPeopleFormToken.objects.all().delete()
+        
+        target = ZohoPeopleFormToken.objects.create(
+            access_token="target_access",
+            refresh_token="target_refresh"
+        )
+        # Newer row but no refresh token
+        ZohoPeopleFormToken.objects.create(
+            access_token="newest_access",
+            refresh_token=None
+        )
+
+        with patch('zohopeople.utils.requests.post') as mock_post:
+            mock_post.return_value.status_code = 200
+            mock_post.return_value.json.return_value = {"access_token": "updated_access"}
+            
+            generate_access_token()
+            
+            target.refresh_from_db()
+            self.assertEqual(target.access_token, "updated_access")
+
+    @patch('zohopeople.utils.requests.post')
+    def test_generate_access_token_failure(self, mock_post):
+        mock_post.return_value.status_code = 400
+        response = generate_access_token()
+        self.assertIsNone(response)
+
+    @patch('zohopeople.utils.requests.post')
+    def test_get_payees_details_no_token(self, mock_post):
+        ZohoPeopleFormToken.objects.all().delete()
+        response = get_payees_details("HRM123")
+        self.assertIsNone(response)
+        self.assertEqual(mock_post.call_count, 0)
+
     @patch('zohopeople.utils.requests.post')
     def test_get_payees_details_retry_on_401(self, mock_post):
         # Sequence: 

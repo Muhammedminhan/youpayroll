@@ -18,7 +18,7 @@ def call_token_generation_api(url, data):
             return response
         else:
             logger.warning(f"Token generation failed. Status: {response.status_code}, Body: {response.text}")
-            return response
+            return None
     except RequestException as err:
         logger.error(f"Network error in token generation API at {url}")
         return None
@@ -53,7 +53,7 @@ def generate_access_token():
             return response
         else:
             logger.warning(f"Failed to generate access token. Status: {response.status_code}, Body: {response.text}")
-            return response
+            return None
     except RequestException as e:
         logger.error(f"Network error during access token generation: {e}")
         return None
@@ -68,8 +68,8 @@ def get_emp_access_token():
         # Filter by presence of token to ensure we get a usable row
         latest_token_obj = ZohoPeopleFormToken.objects.filter(access_token__isnull=False).latest('created')
         return latest_token_obj.access_token
-    except Exception as e:
-        logger.error(f"Error retrieving ZohoPeopleFormToken: {e}")
+    except ZohoPeopleFormToken.DoesNotExist:
+        logger.error("No ZohoPeopleFormToken found in database.")
         return None
 
 
