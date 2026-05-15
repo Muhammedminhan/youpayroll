@@ -101,7 +101,8 @@ def get_payees_details(emp_id, retry=True):
     body = {"searchParams": json.dumps(search_params)}
 
     try:
-        response = requests.post(url=url, headers=headers, params=body, timeout=30)
+        # Use data=body to send form-encoded data instead of query params
+        response = requests.post(url=url, headers=headers, data=body, timeout=30)
         if response.status_code == 200:
             return response
 
@@ -111,7 +112,8 @@ def get_payees_details(emp_id, retry=True):
                 return get_payees_details(emp_id, retry=False)
             else:
                 logger.error("Failed to refresh token during 401 retry.")
-                return gen_resp
+                # Return original response to maintain contract consistency
+                return response
 
         else:
             logger.warning(f"Zoho API error for emp_id {emp_id}. Status: {response.status_code}, Body: {response.text}")

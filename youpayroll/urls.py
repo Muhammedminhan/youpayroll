@@ -27,12 +27,13 @@ from .views import HealthCheck
 urlpatterns = [
     path('vinton-gray-cerf/', admin.site.urls),
     path('health/', HealthCheck.as_view(), name='health'),
-    path('graphql/', csrf_exempt(FileUploadGraphQLView.as_view(graphiql=settings.DEBUG,
-                                                               schema=schema))),
+    path('graphql/', FileUploadGraphQLView.as_view(graphiql=settings.DEBUG,
+                                                               schema=schema)),
     path('accounts/', include('allauth.urls')),
     path('api/', include('core.urls')),
     path('api/payees/', include('payees.urls')),
     path('api/payroll/', include('payroll.urls')),
 ]
-urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
-urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+if settings.DEBUG:
+    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

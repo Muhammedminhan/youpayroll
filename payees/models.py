@@ -1,6 +1,9 @@
 from django.utils.translation import gettext_lazy as _
 from django.core.validators import FileExtensionValidator
 from django.db import models
+from safedelete.models import SafeDeleteModel
+from safedelete.managers import SafeDeleteManager
+from safedelete.queryset import SafeDeleteQueryset
 from django.contrib.auth.models import User
 from auditlog.registry import auditlog
 from .upload_helpers import user_directory_path, validate_image
@@ -10,10 +13,10 @@ from configs.models import TDS
 # Create your models here.
 
 
-class Payee(models.Model):
+class Payee(SafeDeleteModel):
     """ Stores the information of the Payee in the database """
 
-    is_deleted = models.BooleanField(default=False)
+    _safedelete_policy = 1  # SOFT_DELETE_CASCADE
     status = models.CharField(max_length=20, choices=STATUS_CHOICES,
                               default='active',
                               help_text=PAYEE_STATUS_HELP_TEXT)
@@ -36,13 +39,9 @@ class Payee(models.Model):
         verbose_name = _("Payee")
 
     def __str__(self):
-        if self.full_name is not None:
+        if self.full_name:
             return self.full_name
         return self.hrm_id
-
-    def delete(self, *args, **kwargs):
-        self.is_deleted = True
-        self.save()
 
 
 auditlog.register(Payee)

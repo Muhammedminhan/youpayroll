@@ -1,7 +1,7 @@
 import graphene
 from graphene_django.types import DjangoObjectType
+from core.decorators import login_required
 from .models import Payment, PayRecordRegister
-from youpayroll.settings.decorators import login_required
 
 
 class PayRecordRegisterType(DjangoObjectType):

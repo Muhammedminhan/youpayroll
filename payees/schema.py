@@ -7,7 +7,7 @@ import graphene
 from graphene_django.types import DjangoObjectType
 from graphene_file_upload.scalars import Upload
 from graphql import GraphQLError
-from youpayroll.settings.decorators import login_required
+from core.decorators import login_required
 from payees.models import Payee, BankDetails, BankDetailsAck
 from payees.upload_helpers import validate_image
 

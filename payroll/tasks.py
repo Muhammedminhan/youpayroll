@@ -1,5 +1,6 @@
 import logging
 
+import re
 from celery import shared_task
 from decimal import Decimal
 
@@ -42,38 +43,43 @@ def run_pay_run_task(payrun_id):
                 logger.info('Processing payee: %s', payee)
 
                 try:
+                    # Idempotency check: Skip if record already exists for this pay run
+                    if PayRecordRegister.objects.filter(pay_run=pay_run, payee=payee).exists():
+                        logger.info('PayRecordRegister already exists for payee: %s. Skipping.', payee.full_name)
+                        continue
+
                     bank_details = BankDetails.objects.get(payee=payee, payee_acknowledgement=True)
+                    total_amount = Payment.objects.get(payee=payee)
+
+                    tds_percentage = Decimal(str(payee.tds_type.tds_percentage if payee.tds_type else 0))
+                    tds_amount = (total_amount.amount * tds_percentage) / Decimal('100')
+                    total_net_income = total_amount.amount - tds_amount
+
+                    PayRecordRegister.objects.create(
+                        pay_run=pay_run,
+                        amount=total_amount.amount,
+                        payee=payee,
+                        bank_name=bank_details.bank_name,
+                        account_number=bank_details.account_no,
+                        account_holder_name=bank_details.account_holder_name,
+                        account_type=bank_details.account_type,
+                        ifsc_code=bank_details.ifsc_code,
+                        micr_code=bank_details.micr_code,
+                        swift_code=bank_details.swift_code,
+                        branch_address=bank_details.branch_address,
+                        tds_percentage=tds_percentage,
+                        gross_amount=total_amount.amount,
+                        net_income=total_net_income,
+                    )
+                    logger.info('PayRecordRegister created for payee: %s', payee.full_name)
+
                 except BankDetails.DoesNotExist:
                     error_log.append(f"{payee.full_name} - Missing acknowledged bank details")
-                    continue
-
-                try:
-                    total_amount = Payment.objects.get(payee=payee)
                 except Payment.DoesNotExist:
                     error_log.append(f"{payee.full_name} - No payment data available")
-                    continue
-
-                tds_percentage = Decimal(str(payee.tds_type.tds_percentage if payee.tds_type else 0))
-                tds_amount = (total_amount.amount * tds_percentage) / Decimal('100')
-                total_net_income = total_amount.amount - tds_amount
-
-                PayRecordRegister.objects.create(
-                    pay_run=pay_run,
-                    amount=total_amount.amount,
-                    payee=payee,
-                    bank_name=bank_details.bank_name,
-                    account_number=bank_details.account_no,
-                    account_holder_name=bank_details.account_holder_name,
-                    account_type=bank_details.account_type,
-                    ifsc_code=bank_details.ifsc_code,
-                    micr_code=bank_details.micr_code,
-                    swift_code=bank_details.swift_code,
-                    branch_address=bank_details.branch_address,
-                    tds_percentage=tds_percentage,
-                    gross_amount=total_amount.amount,
-                    net_income=total_net_income,
-                )
-                logger.info('PayRecordRegister created for payee: %s', payee.full_name)
+                except Exception as e:
+                    logger.error(f"Unexpected error for payee {payee}: {e}")
+                    error_log.append(f"{payee.full_name} - Unexpected error: {e}")
 
             if error_log:
                 pay_run.error_log = '\n'.join(error_log)
@@ -121,11 +127,22 @@ def extract_form16_zip_task(form16_id):
                         continue
 
                     pan_no = cleaned_filename.split('_')[0].upper()
+                    
+                    # Validate PAN format (5 letters, 4 digits, 1 letter)
+                    if not re.match(r'^[A-Z]{5}\d{4}[A-Z]$', pan_no):
+                        logger.warning(f"Invalid PAN format '{pan_no}' derived from file '{cleaned_filename}'. Skipping.")
+                        continue
+
+                    # Idempotency check: Skip if entry already exists for this financial year and filename
+                    if Form16Entries.objects.filter(financial_year=instance, form_16__contains=cleaned_filename).exists():
+                        logger.info(f"Form 16 entry for {cleaned_filename} already exists. Skipping.")
+                        continue
+
                     try:
                         payee = Payee.objects.get(pan_no=pan_no)
                     except Payee.DoesNotExist:
-                        logger.warning(f"Payee with PAN {pan_no} not found for file {cleaned_filename}. Creating orphan entry.")
-                        payee = None
+                        logger.warning(f"Payee with PAN {pan_no} not found for file {cleaned_filename}. Skipping orphan creation.")
+                        continue
 
                     new_entry = Form16Entries(financial_year=instance, payee=payee)
                     new_entry.form_16.save(cleaned_filename, ContentFile(file_content), save=True)

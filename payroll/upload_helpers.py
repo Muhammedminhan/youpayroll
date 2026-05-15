@@ -8,8 +8,11 @@ def validate_zip_file(file):
             raise ValidationError("The uploaded file is not a valid ZIP file.")
     except ValidationError:
         raise
-    except Exception as e:
-        raise ValidationError(f"Error validating ZIP file: {str(e)}")
+    except ValidationError:
+        raise
+    except Exception:
+        # Avoid leaking internal details to API
+        raise ValidationError("An error occurred while validating the ZIP file.")
 
 
 def form16_extracted_path(instance, filename):
