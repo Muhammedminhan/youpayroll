@@ -5,7 +5,8 @@ from .base import *
 # Enforce production mode
 DEBUG = False
 
-# Enforce GOOGLE_CLIENT_ID in production
+# Explicitly read from environment to ensure NameErrors are avoided
+GOOGLE_CLIENT_ID = config('GOOGLE_CLIENT_ID', default=None)
 if not GOOGLE_CLIENT_ID:
     raise ImproperlyConfigured('GOOGLE_CLIENT_ID must be set in production.')
 

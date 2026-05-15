@@ -1,6 +1,6 @@
 from django.utils.translation import gettext_lazy as _
 from django.core.validators import FileExtensionValidator
-from django.db import models
+from django.db import models, transaction
 from safedelete.models import SafeDeleteModel
 from safedelete.managers import SafeDeleteManager
 from safedelete.queryset import SafeDeleteQueryset
@@ -10,25 +10,21 @@ from .upload_helpers import user_directory_path, validate_image
 from .constants import (STATUS_CHOICES, PAYEE_STATUS_HELP_TEXT)
 from configs.models import TDS
 
-# Create your models here.
-
-
 class Payee(SafeDeleteModel):
     """ Stores the information of the Payee in the database """
-
     _safedelete_policy = 1  # SOFT_DELETE_CASCADE
     status = models.CharField(max_length=20, choices=STATUS_CHOICES,
                               default='active',
                               help_text=PAYEE_STATUS_HELP_TEXT)
-    hrm_id = models.CharField(max_length=10, help_text="Payee ID obtained "
-                                                       "from Zoho people")
+    # HRM ID is the unique identifier from Zoho
+    hrm_id = models.CharField(max_length=10, unique=True, help_text="Payee ID obtained from Zoho people")
     user = models.OneToOneField(User, on_delete=models.PROTECT)
     tds_type = models.ForeignKey(TDS, on_delete=models.SET_NULL, blank=True,
                                  null=True)
     full_name = models.CharField(max_length=100, null=True, blank=True)
     email = models.EmailField(max_length=100, null=True, blank=True)
     pan_no = models.CharField(max_length=10, unique=True, null=True,
-                              blank=True)
+                               blank=True)
     date_of_joining = models.CharField(max_length=50, null=True, blank=True)
     address = models.TextField(null=True, blank=True)
     is_dark_mode = models.BooleanField(default=False,
@@ -42,13 +38,10 @@ class Payee(SafeDeleteModel):
             return self.full_name
         return self.hrm_id
 
-
 auditlog.register(Payee)
-
 
 class BankDetails(models.Model):
     """ Stores the information of the Payee Bank Account details """
-
     payee = models.ForeignKey(Payee, on_delete=models.CASCADE)
     bank_name = models.CharField(max_length=100, null=True, blank=True)
     account_no = models.CharField(max_length=100, null=True, blank=True)
@@ -61,33 +54,38 @@ class BankDetails(models.Model):
     branch_address = models.TextField(null=True, blank=True)
     payee_acknowledgement = models.BooleanField(default=False, editable=False)
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Snapshot state on load for atomic field tracking in save()
+        self._original_state = {
+            'bank_name': self.bank_name,
+            'account_no': self.account_no,
+            'account_holder_name': self.account_holder_name,
+            'account_type': self.account_type,
+            'ifsc_code': self.ifsc_code,
+            'micr_code': self.micr_code,
+            'swift_code': self.swift_code,
+            'branch_address': self.branch_address,
+        }
+
     class Meta:
         verbose_name = _("Bank Detail")
         verbose_name_plural = _("Bank Details")
 
-
     def save(self, *args, **kwargs):
-        if self.pk:
-            # Robust tracking: read previous state from DB
-            previous = BankDetails.objects.get(pk=self.pk)
-            tracked_fields = [
-                'bank_name', 'account_no', 'account_holder_name',
-                'account_type', 'ifsc_code', 'micr_code', 'swift_code', 'branch_address'
-            ]
-            if any(getattr(self, f) != getattr(previous, f) for f in tracked_fields):
-                self.payee_acknowledgement = False
+        # Atomic check using snapshot to avoid extra DB query and race conditions
+        tracked_fields = self._original_state.keys()
+        if any(getattr(self, f) != self._original_state[f] for f in tracked_fields):
+            self.payee_acknowledgement = False
         super().save(*args, **kwargs)
 
     def __str__(self):
         return self.account_holder_name or f"BankDetails {self.pk}"
 
-
 auditlog.register(BankDetails)
-
 
 class BankDetailsAck(models.Model):
     """ Stores the bank-acknowledgement file uploaded by the payee """
-
     payee = models.ForeignKey(Payee, on_delete=models.CASCADE,
                               related_name='bank_acknowledgement')
     uploaded_date = models.DateTimeField(auto_now_add=True)
@@ -97,14 +95,9 @@ class BankDetailsAck(models.Model):
                                                        allowed_extensions=[
                                                            'jpg', 'jpeg',
                                                            'png'])])
-
-    """Indicates the approval status of the bank details. True if the bank
-    details are approved, False if rejected."""
-
     is_approved = models.BooleanField(default=False)
     correction_comments = models.TextField(blank=True, null=True,
-                                           help_text="Specify any incorrect or mistaken fields "
-                                                     "in the bank details.")
+                                           help_text="Specify any incorrect or mistaken fields in the bank details.")
 
     class Meta:
         verbose_name = _("Bank Detail Acknowledgement")
@@ -112,6 +105,5 @@ class BankDetailsAck(models.Model):
 
     def __str__(self):
         return self.payee.full_name or self.payee.hrm_id or str(self.pk)
-
 
 auditlog.register(BankDetailsAck)

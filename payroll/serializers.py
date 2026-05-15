@@ -21,7 +21,6 @@ class PaymentSerializer(serializers.ModelSerializer):
         read_only_fields = ['id']
 
 class PayRunSerializer(serializers.ModelSerializer):
-    # Fixed: source='payrecordregister_set' is used as the link to related records
     records = serializers.PrimaryKeyRelatedField(source='payrecordregister_set', many=True, read_only=True)
     class Meta:
         model = PayRun

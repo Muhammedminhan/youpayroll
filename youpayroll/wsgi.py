@@ -1,6 +1,6 @@
 import os
 from django.core.wsgi import get_wsgi_application
 
-# Safer default for WSGI entrypoint to prevent accidental dev-mode in prod
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'youpayroll.settings.production')
+# No default settings; forcing explicit DJANGO_SETTINGS_MODULE in all environments.
+# This prevents silent accidental boots with 'production' or 'development' settings.
 application = get_wsgi_application()

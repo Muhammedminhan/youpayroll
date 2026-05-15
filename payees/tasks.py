@@ -4,15 +4,14 @@ from django.core.exceptions import ObjectDoesNotExist
 from .models import Payee
 from zohopeople.utils import get_payees_details
 
-# For getting the named logger configured in settings.py
-logger = logging.getLogger('celery_debug')
+# Using module-level logger for proper hierarchy
+logger = logging.getLogger(__name__)
 
 # To fetch payee details from zoho people
 @shared_task
 def fetch_details(payee_id):
     try:
-        # Use filter().first() to handle multiple-record edge cases gracefully
-        # though HRM ID should ideally be unique.
+        # Using unique hrm_id for lookup
         payee = Payee.objects.filter(hrm_id=payee_id).first()
         if not payee:
             logger.error(f"Payee with HRM ID {payee_id} not found locally. Skipping Zoho call.")
@@ -25,7 +24,6 @@ def fetch_details(payee_id):
         response = get_payees_details(payee_id)
         if response and response.status_code == 200:
             response_data = response.json()
-            # Navigate the nested dictionary safely
             res_obj = response_data.get("response", {})
             result_list = res_obj.get("result", [])
             if result_list:
@@ -45,12 +43,10 @@ def fetch_details(payee_id):
         return
     
     if response_data_list:
-        # Find the specific data key
         fetched_data = response_data_list.get('Employee', [])
         if isinstance(fetched_data, list) and fetched_data:
             fetched_data = fetched_data[0]
         else:
-            # Fallback heuristic if key changes
             fetched_data = None
             for key, value in response_data_list.items():
                 if isinstance(value, list) and value:
@@ -58,7 +54,6 @@ def fetch_details(payee_id):
                     break
         
         if fetched_data:
-            # Only update if value is present in Zoho (don't overwrite with None)
             full_name = f"{fetched_data.get('FirstName', '')} {fetched_data.get('LastName', '')}".strip()
             if full_name:
                 payee.full_name = full_name
