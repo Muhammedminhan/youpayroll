@@ -3,8 +3,12 @@ import logging
 from celery import shared_task
 from decimal import Decimal
 
-from .models import (PayRun, Payment, PayRunStatusChoices, PayRecordRegister)
+from .models import (PayRun, Payment, PayRunStatusChoices, PayRecordRegister, Form16, Form16Entries)
 from payees.models import Payee, BankDetails
+import os
+import zipfile
+from django.core.files.base import ContentFile
+from django.core.files.storage import default_storage
 
 # For getting the named logger
 logger = logging.getLogger('celery_debug')
@@ -20,14 +24,11 @@ def run_pay_run_task(payrun_id):
         logger.error('PayRun with ID %s does not exist.', payrun_id)
         return
 
-    if pay_run.status in [PayRunStatusChoices.COMPLETED,
-                            PayRunStatusChoices.APPROVED,
-                            PayRunStatusChoices.REJECTED,
-                            PayRunStatusChoices.IN_PROGRESS,]:
+    if pay_run.status != PayRunStatusChoices.DUE:
         logger.warning('PayRun %s is not in DUE status. Skipping.', payrun_id)
         return
 
-    payees = Payee.objects.filter(status='active', is_deleted='False')
+    payees = Payee.objects.filter(status='active', is_deleted=False)
     pay_run.status = PayRunStatusChoices.IN_PROGRESS
     pay_run.save()
 
@@ -80,5 +81,46 @@ def run_pay_run_task(payrun_id):
     pay_run.save()
 
     logger.info('PayRun %s processing completed.', payrun_id)
+
+@shared_task
+def extract_form16_zip_task(form16_id):
+    try:
+        instance = Form16.objects.get(pk=form16_id)
+    except Form16.DoesNotExist:
+        return
+
+    if not instance.form16_zip_file or instance.is_extracted:
+        return
+
+    try:
+        with zipfile.ZipFile(instance.form16_zip_file.open('rb')) as zip_ref:
+            for file_name in zip_ref.namelist():
+                if file_name.startswith("._") or "__MACOSX" in file_name:
+                    continue
+
+                if file_name.lower().endswith(('.pdf', '.xml')):
+                    cleaned_filename = os.path.basename(file_name)
+                    save_path = f'uploads/payroll/form16/extracted/{cleaned_filename}'
+
+                    if default_storage.exists(save_path):
+                        default_storage.delete(save_path)
+
+                    file_content = zip_ref.read(file_name)
+                    if not file_content:
+                        continue
+
+                    pan_no = cleaned_filename.split('_')[0].upper()
+                    try:
+                        payee = Payee.objects.get(pan_no=pan_no)
+                    except Payee.DoesNotExist:
+                        payee = None
+
+                    new_entry = Form16Entries(financial_year=instance, payee=payee)
+                    new_entry.form_16.save(cleaned_filename, ContentFile(file_content), save=True)
+
+        instance.is_extracted = True
+        instance.save(update_fields=['is_extracted'])
+    except zipfile.BadZipFile:
+        logger.error(f"Bad ZIP file encountered for Form16 ID {form16_id}")
 
 

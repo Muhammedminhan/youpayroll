@@ -1,9 +1,7 @@
 #!/usr/bin/env python
-"""Django's commands-line utility for administrative tasks."""
+"""Django's command-line utility for administrative tasks."""
 import os
 import sys
-from decouple import config
-
 
 def main():
     """Run administrative tasks."""
@@ -12,7 +10,7 @@ def main():
     warnings.filterwarnings("ignore", category=FutureWarning, module="google.auth.*")
     warnings.filterwarnings("ignore", category=FutureWarning, module="google.oauth2.*")
 
-    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'youpayroll.settings.base')
+    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'youpayroll.settings.development')
 
     try:
         from django.core.management import execute_from_command_line

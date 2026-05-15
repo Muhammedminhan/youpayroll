@@ -30,13 +30,20 @@ def fetch_details(payee_id):
         response_data_list = {}
     
     if response_data_list:
-        for data in response_data_list.values():
-            fetched_data = data[0]
+        try:
             payee = Payee.objects.get(hrm_id=payee_id)
-            payee.full_name = fetched_data["FirstName"] + " " + fetched_data[
-                "LastName"]
-            payee.email = fetched_data["EmailID"]
-            payee.pan_no = fetched_data["Pan_Number"]
-            payee.address = fetched_data["Permanent_Address"]
-            payee.date_of_joining = fetched_data["Dateofjoining"]
-            payee.save()
+        except Payee.DoesNotExist:
+            logger.error(f"Payee with HRM ID {payee_id} not found.")
+            return
+
+        for data in response_data_list.values():
+            if isinstance(data, list) and data:
+                fetched_data = data[0]
+                first_name = fetched_data.get("FirstName", "")
+                last_name = fetched_data.get("LastName", "")
+                payee.full_name = f"{first_name} {last_name}".strip()
+                payee.email = fetched_data.get("EmailID")
+                payee.pan_no = fetched_data.get("Pan_Number")
+                payee.address = fetched_data.get("Permanent_Address")
+                payee.date_of_joining = fetched_data.get("Dateofjoining")
+        payee.save()

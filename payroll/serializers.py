@@ -1,9 +1,9 @@
 from rest_framework import serializers
-from .models import PayRun, Payment, PayRecordRegister, Form16, Form16Entry
+from .models import PayRun, Payment, PayRecordRegister, Form16, Form16Entries
 
 class Form16EntrySerializer(serializers.ModelSerializer):
     class Meta:
-        model = Form16Entry
+        model = Form16Entries
         fields = '__all__'
 
 class Form16Serializer(serializers.ModelSerializer):

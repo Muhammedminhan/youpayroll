@@ -25,14 +25,14 @@ terraform {
 }
 
 provider "kubernetes" {
- host                   = "[KUBERNETES_HOST]"
+  host                   = "[KUBERNETES_HOST]"
   cluster_ca_certificate = base64decode("[KUBERNETES_CLUSTER_CA_CERT]")
   token                  = "[KUBERNETES_TOKEN]"
 }
 
 provider "helm" {
   kubernetes {
-    host                   = "[KUBERNETES_HOST]"
+     host                   = "[KUBERNETES_HOST]"
     cluster_ca_certificate = base64decode("[KUBERNETES_CLUSTER_CA_CERT]")
     token                  = "[KUBERNETES_TOKEN]"
   }

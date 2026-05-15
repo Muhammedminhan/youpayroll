@@ -21,7 +21,7 @@ class Payee(models.Model):
                                                        "from Zoho people")
     user = models.OneToOneField(User, on_delete=models.PROTECT)
     tds_type = models.ForeignKey(TDS, on_delete=models.SET_NULL, blank=True,
-                                 null=True, to_field="tds_legal_name")
+                                 null=True)
     full_name = models.CharField(max_length=100, null=True, blank=True)
     email = models.EmailField(max_length=100, null=True, blank=True)
     pan_no = models.CharField(max_length=10, unique=True, null=True,
@@ -70,22 +70,20 @@ class BankDetails(models.Model):
     def __str__(self):
         return self.account_holder_name
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._original_state = {f.name: getattr(self, f.name) for f in self._meta.fields}
+
     def save(self, *args, **kwargs):
         if self.pk:
-            current_instance = BankDetails.objects.get(pk=self.pk)
-            if (self.payee != current_instance.payee or
-                    self.bank_name != current_instance.bank_name or
-                    self.account_no != current_instance.account_no or
-                    self.account_holder_name !=
-                    current_instance.account_holder_name or
-                    self.account_type != current_instance.account_type or
-                    self.ifsc_code != current_instance.ifsc_code or
-                    self.micr_code != current_instance.micr_code or
-                    self.swift_code != current_instance.swift_code or
-                    self.branch_address !=
-                    current_instance.branch_address):
+            tracked_fields = [
+                'payee_id', 'bank_name', 'account_no', 'account_holder_name',
+                'account_type', 'ifsc_code', 'micr_code', 'swift_code', 'branch_address'
+            ]
+            if any(getattr(self, f) != self._original_state.get(f) for f in tracked_fields):
                 self.payee_acknowledgement = False
         super().save(*args, **kwargs)
+        self._original_state = {f.name: getattr(self, f.name) for f in self._meta.fields}
 
 
 auditlog.register(BankDetails)
@@ -118,7 +116,7 @@ class BankDetailsAck(models.Model):
         verbose_name_plural = _("Bank Detail Acknowledgements")
 
     def __str__(self):
-        return self.payee.full_name
+        return self.payee.full_name or self.payee.hrm_id or str(self.pk)
 
 
 auditlog.register(BankDetailsAck)

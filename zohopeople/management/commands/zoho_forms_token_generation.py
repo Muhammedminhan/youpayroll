@@ -1,28 +1,28 @@
 from decouple import config
 from django.core.management.base import BaseCommand
-from zohopeople.constants import (GRAND_TYPE, ZP_API_REDIR_URI,
+from zohopeople.constants import (GRANT_TYPE, ZP_API_REDIR_URI,
                                   ZP_API_ATOKEN_DOM_URL)
 from zohopeople.models import ZohoPeopleFormToken
-from zohopeople.utils import tgeneration_call_api
+from zohopeople.utils import call_token_generation_api
 
 
-def zoho_form_token_generation(grand_token):
+def zoho_form_token_generation(grant_token):
     """
     Generate Access token for sending data to Zoho People
     and Refresh token to generate new Access token. Store both
     tokens in DB.
     """
     tgeneration_data = {
-        'grant_type': GRAND_TYPE,
+        'grant_type': GRANT_TYPE,
         'client_id': config('ZOHOPEOPLE_CLIENT_ID'),
         'client_secret': config('ZOHOPEOPLE_CLIENT_SECRET'),
         'redirect_uri': ZP_API_REDIR_URI,
-        'code': grand_token
+        'code': grant_token
     }
 
     url = ZP_API_ATOKEN_DOM_URL
     # Send Post request for generating tokens.
-    tgeneration_resp = tgeneration_call_api(url, tgeneration_data)
+    tgeneration_resp = call_token_generation_api(url, tgeneration_data)
 
     if tgeneration_resp:
         # Convert response to json data.
@@ -39,8 +39,8 @@ class Command(BaseCommand):
     help = "Creates refresh tokens"
 
     def add_arguments(self, parser):
-        parser.add_argument("grand_token", type=str)
+        parser.add_argument("grant_token", type=str)
 
     def handle(self, *args, **options):
-        grand_token = options["grand_token"]
-        zoho_form_token_generation(grand_token)
+        grant_token = options["grant_token"]
+        zoho_form_token_generation(grant_token)

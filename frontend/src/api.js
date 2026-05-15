@@ -38,6 +38,7 @@ export const getProfile = async (token) => {
             'Authorization': `Token ${token}`
         }
     });
+    if (!response.ok) throw new Error('Failed to fetch profile');
     return response.json();
 };
 
@@ -47,6 +48,7 @@ export const getPayslips = async (token) => {
             'Authorization': `Token ${token}`
         }
     });
+    if (!response.ok) throw new Error('Failed to fetch payslips');
     return response.json();
 };
 
@@ -58,6 +60,7 @@ export const uploadDocument = async (token, formData) => {
         },
         body: formData
     });
+    if (!response.ok) throw new Error('Failed to upload document');
     return response.json();
 };
 
@@ -67,6 +70,7 @@ export const getUserNotifications = async (token) => {
             'Authorization': `Token ${token}`
         }
     });
+    if (!response.ok) throw new Error('Failed to fetch notifications');
     return response.json();
 };
 
@@ -79,6 +83,7 @@ export const markNotificationAsRead = async (token, notifId) => {
         },
         body: JSON.stringify({ is_read: true })
     });
+    if (!response.ok) throw new Error('Failed to mark notification as read');
     return response.json();
 };
 
@@ -91,5 +96,6 @@ export const updateProfile = async (token, data) => {
         },
         body: JSON.stringify(data)
     });
+    if (!response.ok) throw new Error('Failed to update profile');
     return response.json();
 };

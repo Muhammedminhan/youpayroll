@@ -10,6 +10,7 @@ class PayRunViewSet(viewsets.ModelViewSet):
 class PaymentViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
     serializer_class = PaymentSerializer
+    queryset = Payment.objects.all()
     
     def get_queryset(self):
         return Payment.objects.filter(payee__user=self.request.user)
@@ -17,6 +18,7 @@ class PaymentViewSet(viewsets.ReadOnlyModelViewSet):
 class PayRecordRegisterViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
     serializer_class = PayRecordRegisterSerializer
+    queryset = PayRecordRegister.objects.all()
 
     def get_queryset(self):
         return PayRecordRegister.objects.filter(payee__user=self.request.user)
@@ -29,6 +31,7 @@ class Form16ViewSet(viewsets.ModelViewSet):
 class Form16EntryViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
     serializer_class = Form16EntrySerializer
+    queryset = Form16Entries.objects.all()
 
     def get_queryset(self):
         return Form16Entries.objects.filter(payee__user=self.request.user)

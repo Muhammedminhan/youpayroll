@@ -5,7 +5,7 @@ import celery
 
 
 # set the default Django settings module for the 'celery' program.
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'youpayroll.settings.base')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'youpayroll.settings.development')
 
 # For creating a new Celery application instance with the project name.
 app = Celery('youpayroll')
@@ -15,8 +15,3 @@ app.config_from_object('django.conf:settings', namespace='CELERY')
 
 # Load task modules from all registered Django apps.
 app.autodiscover_tasks()
-
-
-@celery.signals.setup_logging.connect
-def setup_celery_logging(**kwargs):
-    return logging.getLogger('celery')

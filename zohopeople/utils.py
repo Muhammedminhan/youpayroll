@@ -12,13 +12,13 @@ from .constants import ZP_EMPLOYEE_DETAILS_API, ZP_API_ATOKEN_DOM_URL
 logger = logging.getLogger(__name__)
 
 
-def tgeneration_call_api(url, data):
+def call_token_generation_api(url, data):
     """ Generate tokens"""
     response = None
     try:
         response = requests.post(url=url, data=data, timeout=30)
-        logger.info("Token generation is successful")
         response.raise_for_status()
+        logger.info("Token generation is successful")
     except HTTPError as errh:
         logger.warning(f"Http Error:{errh}")
     except ConnectionError as errc:
@@ -39,8 +39,11 @@ def generate_access_token():
     taken from the DB. if refresh token is not present in DB, It is needed to
     generate using custom commands
     """
-    refresh_token = ZohoPeopleFormToken.objects.order_by("created").first() \
-        .refresh_token
+    token_obj = ZohoPeopleFormToken.objects.filter(refresh_token__isnull=False).last()
+    if not token_obj:
+        logger.error("No refresh token found in database.")
+        return None
+    refresh_token = token_obj.refresh_token
     url = ZP_API_ATOKEN_DOM_URL
     data = {
         "refresh_token": refresh_token,
@@ -50,9 +53,9 @@ def generate_access_token():
     }
     response = requests.post(url=url, data=data, timeout=30)
     if response.status_code == 200:
-        # Stores newly  generated access token in DB
-        ZohoPeopleFormToken.objects.create(access_token=response.json()
-                                           .get("access_token"))
+        # Update the existing token row instead of accumulating rows
+        token_obj.access_token = response.json().get("access_token")
+        token_obj.save(update_fields=['access_token'])
         return response
     else:
         logger.warning("OOps: Some Error Occurred")
@@ -69,7 +72,7 @@ def get_emp_access_token():
 
 
 # Function to call zoho people API to get the details of payees
-def get_payees_details(emp_id):
+def get_payees_details(emp_id, retry=True):
     """
     Calls the zoho people API to get the details of payees
     """
@@ -90,9 +93,9 @@ def get_payees_details(emp_id):
     if response.status_code == 200:
         return response
 
-    elif response.status_code == 401:
+    elif response.status_code == 401 and retry:
         generate_access_token()
-        response = get_payees_details(emp_id)
+        response = get_payees_details(emp_id, retry=False)
         if response.status_code == 200:
             return response
 

@@ -38,33 +38,31 @@ class PayRunForm(forms.ModelForm):
                     next_month = 1
                     next_year += 1
 
-                if self.instance.pk is None:
-                    if latest_payrun.status == PayRunStatusChoices.APPROVED:
-                        self.fields['month'].initial = next_month
-                        self.fields['year'].initial = next_year
+                if latest_payrun.status == PayRunStatusChoices.APPROVED:
+                    self.fields['month'].initial = next_month
+                    self.fields['year'].initial = next_year
 
-                        # Make the month and year fields read-only
-                        self.fields['month'].widget.attrs['readonly'] = 'readonly'
-                        self.fields['year'].widget.attrs['readonly'] = 'readonly'
+                    # Make the month and year fields read-only
+                    self.fields['month'].widget.attrs['readonly'] = 'readonly'
+                    self.fields['year'].widget.attrs['readonly'] = 'readonly'
 
-                    elif latest_payrun.status == PayRunStatusChoices.REJECTED:
-                        self.fields['month'].initial = latest_payrun.month
-                        self.fields['year'].initial = latest_payrun.year
+                elif latest_payrun.status == PayRunStatusChoices.REJECTED:
+                    self.fields['month'].initial = latest_payrun.month
+                    self.fields['year'].initial = latest_payrun.year
 
-                        # Make the month and year fields read-only
-                        self.fields['month'].widget.attrs['readonly'] = 'readonly'
-                        self.fields['year'].widget.attrs['readonly'] = 'readonly'
+                    # Make the month and year fields read-only
+                    self.fields['month'].widget.attrs['readonly'] = 'readonly'
+                    self.fields['year'].widget.attrs['readonly'] = 'readonly'
 
             else:
                 # For the initial PayRun, autofill current month and year
-                if self.instance.pk is None:
-                    current_date = datetime.date.today()
-                    self.fields['month'].initial = current_date.month
-                    self.fields['year'].initial = current_date.year
+                current_date = datetime.date.today()
+                self.fields['month'].initial = current_date.month
+                self.fields['year'].initial = current_date.year
 
-                    # Allow editing for the first PayRun instance
-                    self.fields['month'].widget.attrs.pop('readonly', None)
-                    self.fields['year'].widget.attrs.pop('readonly', None)
+                # Allow editing for the first PayRun instance
+                self.fields['month'].widget.attrs.pop('readonly', None)
+                self.fields['year'].widget.attrs.pop('readonly', None)
 
             # Ensure the month field accepts values in the range of 1 to 12.
             self.fields['month'].widget.attrs['min'] = 1
