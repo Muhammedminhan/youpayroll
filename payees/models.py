@@ -2,8 +2,6 @@ from django.utils.translation import gettext_lazy as _
 from django.core.validators import FileExtensionValidator
 from django.db import models, transaction
 from safedelete.models import SafeDeleteModel
-from safedelete.managers import SafeDeleteManager
-from safedelete.queryset import SafeDeleteQueryset
 from django.contrib.auth.models import User
 from auditlog.registry import auditlog
 from .upload_helpers import user_directory_path, validate_image
@@ -12,11 +10,10 @@ from configs.models import TDS
 
 class Payee(SafeDeleteModel):
     """ Stores the information of the Payee in the database """
-    _safedelete_policy = 1  # SOFT_DELETE_CASCADE
+    _safedelete_policy = 1
     status = models.CharField(max_length=20, choices=STATUS_CHOICES,
                               default='active',
                               help_text=PAYEE_STATUS_HELP_TEXT)
-    # HRM ID is the unique identifier from Zoho
     hrm_id = models.CharField(max_length=10, unique=True, help_text="Payee ID obtained from Zoho people")
     user = models.OneToOneField(User, on_delete=models.PROTECT)
     tds_type = models.ForeignKey(TDS, on_delete=models.SET_NULL, blank=True,
@@ -34,9 +31,7 @@ class Payee(SafeDeleteModel):
         verbose_name = _("Payee")
 
     def __str__(self):
-        if self.full_name:
-            return self.full_name
-        return self.hrm_id
+        return self.full_name or self.hrm_id
 
 auditlog.register(Payee)
 
@@ -56,7 +51,10 @@ class BankDetails(models.Model):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Snapshot state on load for atomic field tracking in save()
+        self._set_state_snapshot()
+
+    def _set_state_snapshot(self):
+        # Snapshot state for mutation tracking
         self._original_state = {
             'bank_name': self.bank_name,
             'account_no': self.account_no,
@@ -73,11 +71,12 @@ class BankDetails(models.Model):
         verbose_name_plural = _("Bank Details")
 
     def save(self, *args, **kwargs):
-        # Atomic check using snapshot to avoid extra DB query and race conditions
+        # Reset acknowledgement if tracked fields changed
         tracked_fields = self._original_state.keys()
         if any(getattr(self, f) != self._original_state[f] for f in tracked_fields):
             self.payee_acknowledgement = False
         super().save(*args, **kwargs)
+        self._set_state_snapshot() # Refresh snapshot after save
 
     def __str__(self):
         return self.account_holder_name or f"BankDetails {self.pk}"
@@ -88,6 +87,9 @@ class BankDetailsAck(models.Model):
     """ Stores the bank-acknowledgement file uploaded by the payee """
     payee = models.ForeignKey(Payee, on_delete=models.CASCADE,
                               related_name='bank_acknowledgement')
+    # Link to the specific bank record being acknowledged to avoid race/ambiguity
+    bank_details = models.ForeignKey(BankDetails, on_delete=models.CASCADE, 
+                                     related_name='acknowledgements', null=True)
     uploaded_date = models.DateTimeField(auto_now_add=True)
     bank_details_screenshot = models.ImageField(
         upload_to=user_directory_path, validators=[validate_image,

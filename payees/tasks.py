@@ -1,23 +1,18 @@
 import logging
 from celery import shared_task
-from django.core.exceptions import ObjectDoesNotExist
 from .models import Payee
 from zohopeople.utils import get_payees_details
 
-# Using module-level logger for proper hierarchy
 logger = logging.getLogger(__name__)
 
-# To fetch payee details from zoho people
 @shared_task
 def fetch_details(payee_id):
-    try:
-        # Using unique hrm_id for lookup
-        payee = Payee.objects.filter(hrm_id=payee_id).first()
-        if not payee:
-            logger.error(f"Payee with HRM ID {payee_id} not found locally. Skipping Zoho call.")
-            return
-    except Exception as e:
-        logger.error(f"Error looking up payee {payee_id}: {e}")
+    """
+    Fetch payee details from Zoho and update local record.
+    """
+    payee = Payee.objects.filter(hrm_id=payee_id).first()
+    if not payee:
+        logger.error(f"Payee with HRM ID {payee_id} not found locally.")
         return
 
     try:
@@ -35,11 +30,8 @@ def fetch_details(payee_id):
             status = response.status_code if response else 'None'
             logger.warning(f"Zoho API returned status {status} for {payee_id}")
             return
-    except (ValueError, KeyError) as e:
-        logger.error(f"Data parsing error in fetch_details for {payee_id}: {e}")
-        return
-    except Exception as e:
-        logger.error(f"Unexpected error in fetch_details for {payee_id}: {e}")
+    except Exception:
+        logger.exception(f"Unexpected error in fetch_details for {payee_id}")
         return
     
     if response_data_list:
@@ -75,5 +67,3 @@ def fetch_details(payee_id):
                 payee.date_of_joining = doj
                 
             payee.save()
-        else:
-            logger.warning(f"Could not find valid payee data list in Zoho response for {payee_id}")

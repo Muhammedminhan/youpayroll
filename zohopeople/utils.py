@@ -19,7 +19,6 @@ def call_token_generation_api(url, data):
             logger.info("Token generation is successful")
             return response
         else:
-            # We log the status code. Callers are responsible for error body redaction if logged.
             logger.warning(f"Token generation failed. Status: {response.status_code}")
             return None
     except RequestException as err:
@@ -30,12 +29,10 @@ def call_token_generation_api(url, data):
 def generate_access_token():
     """
     Calls the zoho people API to generate access token using refresh token.
-    Uses a lightweight check before entering a blocking network call inside a transaction.
+    Uses a lightweight check before entering a blocking network call.
     """
     url = ZP_API_ATOKEN_DOM_URL
     
-    # 1. Quick check: Is a valid token already available?
-    # Using last_refreshed_at for accurate tracking
     token_obj = ZohoPeopleFormToken.objects.filter(
         refresh_token__isnull=False
     ).order_by('-created').first()
@@ -49,10 +46,9 @@ def generate_access_token():
             logger.info("Token was recently refreshed. Skipping network call.")
             resp = requests.Response()
             resp.status_code = 200
-            resp._content = b'{"status": "cached"}' # Prevent json decode error if caller expects body
+            resp._content = b'{"status": "cached"}'
             return resp
 
-    # 2. Network call outside the main row lock to avoid blocking other workers for 30s
     refresh_token = token_obj.refresh_token
     data = {
         "refresh_token": refresh_token,
@@ -68,12 +64,10 @@ def generate_access_token():
             access_token = resp_data.get("access_token")
             
             if not access_token:
-                logger.error(f"Zoho returned 200 but no access_token in body. Response: {resp_data.get('error', 'unknown error')}")
+                logger.error(f"Zoho returned 200 but no access_token in body. Error: {resp_data.get('error')}")
                 return None
 
-            # 3. Use transaction and select_for_update only for the final atomic write
             with transaction.atomic():
-                # Re-fetch with lock
                 locked_token = ZohoPeopleFormToken.objects.select_for_update().get(pk=token_obj.pk)
                 locked_token.access_token = access_token
                 locked_token.last_refreshed_at = timezone.now()
@@ -90,7 +84,6 @@ def generate_access_token():
 
 def get_emp_access_token():
     """Fetch Access token from the DB and return the latest Access token."""
-    # Optimization: Use .only and remove null check (field is non-nullable)
     latest_token_obj = ZohoPeopleFormToken.objects.order_by('-created').only('access_token').first()
     if not latest_token_obj:
         return None
@@ -118,9 +111,7 @@ def get_payees_details(emp_id, retry=True):
         elif response.status_code == 401 and retry:
             gen_resp = generate_access_token()
             if gen_resp and gen_resp.status_code == 200:
-                # Recurse: next call will use the newly generated token
                 return get_payees_details(emp_id, retry=False)
-            logger.error("Failed to refresh token during 401 retry.")
             return None
         elif response.status_code == 401 and not retry:
             logger.error(f"Zoho API returned 401 even after token refresh for emp_id {emp_id}.")

@@ -1,4 +1,3 @@
-import os
 from celery import Celery
 
 # No default settings; forcing explicit DJANGO_SETTINGS_MODULE.
