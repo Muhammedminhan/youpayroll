@@ -2,6 +2,7 @@ import os
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from django.db import models
+from django.core.validators import MinValueValidator, MaxValueValidator
 from django.contrib.auth.models import User
 from auditlog.registry import auditlog
 from .utils import get_month_name
@@ -46,7 +47,7 @@ class PayRun(models.Model):
     Payments are only made to payees who are active and have
     acknowledged their bank details.
     """
-    month = models.IntegerField()
+    month = models.IntegerField(validators=[MinValueValidator(1), MaxValueValidator(12)])
     year = models.IntegerField()
     status = models.CharField(max_length=20,
                               choices=PayRunStatusChoices.choices,

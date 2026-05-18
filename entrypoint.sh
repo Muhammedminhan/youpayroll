@@ -3,8 +3,8 @@
 # Print the value of the DATABASE environment variable
 echo "$DATABASE"
 
-# Check if the DATABASE variable is set to "postgres"
-if [ "$DATABASE" = "postgres" ]; then
+# Check if wait-for-postgres is requested or if PostgreSQL is the active engine
+if [ "$DATABASE" = "postgres" ] || echo "$DATABASE_ENGINE" | grep -iq "postgres"; then
     echo "Waiting for postgres..."
 
     # Loop until PostgreSQL is ready to accept connections (using nc -z from netcat-openbsd)

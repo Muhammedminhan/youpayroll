@@ -1,6 +1,7 @@
 from django.utils.translation import gettext_lazy as _
 from django.core.validators import FileExtensionValidator
 from django.db import models
+from safedelete import SOFT_DELETE
 from safedelete.models import SafeDeleteModel
 from django.contrib.auth.models import User
 from auditlog.registry import auditlog
@@ -10,7 +11,7 @@ from configs.models import TDS
 
 class Payee(SafeDeleteModel):
     """ Stores the information of the Payee in the database """
-    _safedelete_policy = 1
+    _safedelete_policy = SOFT_DELETE
     status = models.CharField(max_length=20, choices=STATUS_CHOICES,
                               default='active',
                               help_text=PAYEE_STATUS_HELP_TEXT)

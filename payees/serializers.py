@@ -2,8 +2,6 @@ from rest_framework import serializers
 from .models import Payee, BankDetails, BankDetailsAck
 
 class BankDetailSerializer(serializers.ModelSerializer):
-    account_no = serializers.SerializerMethodField()
-
     class Meta:
         model = BankDetails
         fields = [
@@ -13,14 +11,22 @@ class BankDetailSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['payee', 'payee_acknowledgement']
 
-    def get_account_no(self, obj):
-        acc = obj.account_no or ""
-        if not acc:
-            return ""
-        return "**********"
+    def to_representation(self, instance):
+        ret = super().to_representation(instance)
+        acc = instance.account_no or ""
+        if acc:
+            ret['account_no'] = "**********"
+        else:
+            ret['account_no'] = ""
+        return ret
+
+    def to_internal_value(self, data):
+        ret = super().to_internal_value(data)
+        if 'account_no' in ret and ret['account_no'] == '**********':
+            ret.pop('account_no')
+        return ret
 
 class PayeeSerializer(serializers.ModelSerializer):
-    pan_no = serializers.SerializerMethodField()
     bank_details = BankDetailSerializer(source='bankdetails_set', many=True, read_only=True)
     class Meta:
         model = Payee
@@ -31,11 +37,20 @@ class PayeeSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['id', 'hrm_id', 'status']
 
-    def get_pan_no(self, obj):
-        pan = obj.pan_no or ""
-        if not pan:
-            return ""
-        return "**********"
+    def to_representation(self, instance):
+        ret = super().to_representation(instance)
+        pan = instance.pan_no or ""
+        if pan:
+            ret['pan_no'] = "**********"
+        else:
+            ret['pan_no'] = ""
+        return ret
+
+    def to_internal_value(self, data):
+        ret = super().to_internal_value(data)
+        if 'pan_no' in ret and ret['pan_no'] == '**********':
+            ret.pop('pan_no')
+        return ret
 
 class BankDetailAcknowledgementSerializer(serializers.ModelSerializer):
     class Meta:

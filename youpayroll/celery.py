@@ -1,6 +1,9 @@
+import os
 from celery import Celery
 
-# No default settings; forcing explicit DJANGO_SETTINGS_MODULE.
+# Set default settings module if not explicitly defined to prevent resolution failure
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'youpayroll.settings.production')
+
 app = Celery('youpayroll')
 app.config_from_object('django.conf:settings', namespace='CELERY')
 app.autodiscover_tasks()

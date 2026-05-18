@@ -96,37 +96,49 @@ def get_emp_access_token():
     return latest_token_obj.access_token
 
 
-def get_payees_details(emp_id, retry=True, access_token=None):
-    """Calls the zoho people API to get the details of payees."""
-    if not access_token:
-        access_token = get_emp_access_token()
-    if not access_token:
-        return None
-
+def get_payees_details(emp_id, access_token=None):
+    """Calls the zoho people API to get the details of payees using a bounded loop counter to manage retries."""
     url = ZP_EMPLOYEE_DETAILS_API
     search_params = {"searchField": 'EmployeeID', "searchOperator": 'Is', "searchText": str(emp_id)}
-    headers = {
-        "Authorization": "Zoho-oauthtoken " + access_token,
-        "Content-Type": "application/x-www-form-urlencoded",
-    }
     body = {"searchParams": json.dumps(search_params)}
 
-    try:
-        response = requests.post(url=url, headers=headers, data=body, timeout=30)
-        if response.status_code == 200:
-            return response
-        elif response.status_code == 401 and retry:
-            gen_resp = generate_access_token(force=True)
-            if gen_resp and gen_resp.get("status") in ("success", "cached"):
-                new_token = gen_resp.get("access_token")
-                return get_payees_details(emp_id, retry=False, access_token=new_token)
+    for attempt in range(2):
+        if not access_token:
+            access_token = get_emp_access_token()
+        if not access_token:
+            if attempt == 0:
+                # Force refresh token immediately if no token is found in database
+                gen_resp = generate_access_token(force=True)
+                if gen_resp and gen_resp.get("status") in ("success", "cached"):
+                    access_token = gen_resp.get("access_token")
+                    continue
             return None
-        elif response.status_code == 401 and not retry:
-            logger.error(f"Zoho API returned 401 even after token refresh for emp_id {emp_id}.")
+
+        headers = {
+            "Authorization": "Zoho-oauthtoken " + access_token,
+            "Content-Type": "application/x-www-form-urlencoded",
+        }
+
+        try:
+            response = requests.post(url=url, headers=headers, data=body, timeout=30)
+            if response.status_code == 200:
+                return response
+            elif response.status_code == 401 and attempt == 0:
+                logger.info(f"Zoho API returned 401. Forcing token refresh and retrying.")
+                gen_resp = generate_access_token(force=True)
+                if gen_resp and gen_resp.get("status") in ("success", "cached"):
+                    access_token = gen_resp.get("access_token")
+                    # Clear access_token variable from parameter to read fresh from gen_resp
+                    continue
+                return None
+            elif response.status_code == 401:
+                logger.error(f"Zoho API returned 401 even after token refresh for emp_id {emp_id}.")
+                return None
+            else:
+                logger.warning(f"Zoho API error for emp_id {emp_id}. Status: {response.status_code}")
+                return None
+        except RequestException as e:
+            logger.error(f"Network error calling Zoho API for emp_id {emp_id}: {e}")
             return None
-        else:
-            logger.warning(f"Zoho API error for emp_id {emp_id}. Status: {response.status_code}")
-            return None
-    except RequestException as e:
-        logger.error(f"Network error calling Zoho API for emp_id {emp_id}: {e}")
-        return None
+
+    return None
