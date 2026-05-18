@@ -14,6 +14,10 @@ class BankDetailsTest(TestCase):
         )
 
     def test_bank_details_change_resets_acknowledgement(self):
+        """
+        Verifies that any mutation on tracked fields resets payee_acknowledgement to False.
+        Note: This is handled atomically inside BankDetails.save() rather than payees/signals.py.
+        """
         # Update bank name
         self.bank_details.bank_name = 'New Bank'
         self.bank_details.save()

@@ -1,11 +1,12 @@
 from .models import Payee
-from .constants import RESTRICTED_PAYEE_GROUP
+from .constants import RESTRICTED_PAYEE_GROUPS
 from django.contrib.auth import get_user_model
+from django.core.exceptions import FieldError
 
 
 def restrict_queryset_by_group(qs, user, payee_field=None):
     # If user is in restricted group, limit their access
-    if user.groups.filter(name__in=RESTRICTED_PAYEE_GROUP).exists():
+    if user.groups.filter(name__in=RESTRICTED_PAYEE_GROUPS).exists():
         # Special case: if querying the User model directly
         if qs.model == get_user_model():
             return qs.filter(id=user.id)
@@ -15,7 +16,18 @@ def restrict_queryset_by_group(qs, user, payee_field=None):
             if not payee:
                 return qs.none()
             return qs.filter(**{payee_field: payee})
-        return qs.filter(user=user)  # fallback for generic models with user FK
+            
+        # Fallback to user field check
+        # Validate that the model has a user field to fail-fast cleanly
+        opts = qs.model._meta
+        try:
+            opts.get_field('user')
+        except Exception:
+            raise FieldError(
+                f"Model '{qs.model.__name__}' cannot be filtered automatically: "
+                "payee_field was not specified and model has no 'user' field."
+            )
+        return qs.filter(user=user)
 
     # If not in restricted group, return all
     return qs

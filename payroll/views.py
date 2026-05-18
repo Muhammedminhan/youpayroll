@@ -1,6 +1,10 @@
 from rest_framework import viewsets, permissions
-from .models import PayRun, Payment, PayRecordRegister, Form16, Form16Entries
+from .models import PayRun, Payment, PayRecordRegister, Form16, Form16Entry
 from .serializers import PayRunSerializer, PaymentSerializer, PayRecordRegisterSerializer, Form16Serializer, Form16EntrySerializer
+
+# NOTE: These viewsets are strictly ReadOnlyModelViewSet and use get_queryset to filter by request.user.
+# If converting any of these to a standard ModelViewSet in the future, you MUST implement robust
+# object-level permissions (e.g. override check_object_permissions) to prevent unauthorized mutations.
 
 class PayRunViewSet(viewsets.ReadOnlyModelViewSet):
     """
@@ -35,7 +39,7 @@ class Form16ViewSet(viewsets.ReadOnlyModelViewSet):
 class Form16EntryViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
     serializer_class = Form16EntrySerializer
-    queryset = Form16Entries.objects.none()
+    queryset = Form16Entry.objects.none()
 
     def get_queryset(self):
-        return Form16Entries.objects.filter(payee__user=self.request.user)
+        return Form16Entry.objects.filter(payee__user=self.request.user)

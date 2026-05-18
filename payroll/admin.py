@@ -7,9 +7,9 @@ from django.utils.html import format_html
 
 from decimal import Decimal
 from payees.utils import restrict_queryset_by_group
-from payees.constants import RESTRICTED_PAYEE_GROUP
+from payees.constants import RESTRICTED_PAYEE_GROUPS
 from .models import (Payment, PayRecordRegister, PayRun,
-                     PayRunStatusChoices, Form16, Form16Entries,
+                     PayRunStatusChoices, Form16, Form16Entry,
                      ComponentValue)
 from .alerts import (approve_payrun_action, reject_payrun_action,
                      run_payrun_action, is_payrun_exists)
@@ -208,7 +208,7 @@ class PayRecordRegisterAdmin(admin.ModelAdmin):
             return qs  # show everything, even unapproved
 
         # Check if user is in a restricted group
-        is_restricted = request.user.groups.filter(name__in=RESTRICTED_PAYEE_GROUP).exists()
+        is_restricted = request.user.groups.filter(name__in=RESTRICTED_PAYEE_GROUPS).exists()
 
         if is_restricted:
             # Restrict to records linked to this user + filter for approved pay_runs
@@ -262,7 +262,7 @@ class PayRecordRegisterAdmin(admin.ModelAdmin):
         pay_record_register.save()
 
 
-class Forms16EntriesAdmin(admin.ModelAdmin):
+class Form16EntryAdmin(admin.ModelAdmin):
     list_display = (
         'financial_year', 'form_16_link', 'form_16_link_to_download')
     list_filter = ('financial_year',)
@@ -295,13 +295,13 @@ class Forms16EntriesAdmin(admin.ModelAdmin):
 
 
 class Form16Inline(admin.TabularInline):  # or StackedInline
-    model = Form16Entries
+    model = Form16Entry
     fields = ['form_16_link', 'financial_year']
     readonly_fields = ['form_16_link', 'financial_year']
     extra = 0
     can_delete = False
-    verbose_name = "Form16 PDF"
-    verbose_name_plural = "Form16 PDFs"
+    verbose_name = "Form 16 Entry"
+    verbose_name_plural = "Form 16 Entries"
 
     def get_queryset(self, request):
         qs = super().get_queryset(request)
@@ -333,10 +333,10 @@ class Forms16Admin(admin.ModelAdmin):
 
     def view_form_entries(self, obj):
         """
-        Generates a button that links to Form16Entries filtered by financial_year.
+        Generates a button that links to Form16Entry filtered by financial_year.
         """
         url = reverse(
-            'admin:payroll_form16entries_changelist')
+            'admin:payroll_form16entry_changelist')
         url += f"?financial_year__id__exact={obj.id}"  # Filters by foreign key ID
         return format_html(
             '<a class="button" href="{}" style="background:#28a745; color:white; padding:4px 8px; border-radius:4px; text-decoration:none;">View Form Entries</a>',
@@ -349,4 +349,4 @@ admin.site.register(Payment, PaymentAdmin)
 admin.site.register(PayRecordRegister, PayRecordRegisterAdmin)
 admin.site.register(PayRun, PayRunAdmin)
 admin.site.register(Form16, Forms16Admin)
-admin.site.register(Form16Entries, Forms16EntriesAdmin)
+admin.site.register(Form16Entry, Form16EntryAdmin)

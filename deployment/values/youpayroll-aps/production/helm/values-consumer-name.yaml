@@ -1,3 +1,5 @@
+# WARNING: This is a template configuration file for background consumers.
+# Replace all instances of 'consumer-name' with the actual consumer name (e.g. 'zoho-sync-worker') during deployment.
 namespace: 'youpayroll-aps'
 
 app_name: 'youpayroll-aps'

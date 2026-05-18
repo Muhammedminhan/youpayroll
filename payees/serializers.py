@@ -22,7 +22,7 @@ class BankDetailSerializer(serializers.ModelSerializer):
 
     def to_internal_value(self, data):
         ret = super().to_internal_value(data)
-        if 'account_no' in ret and ret['account_no'] == '**********':
+        if 'account_no' in ret and '*' in ret['account_no']:
             ret.pop('account_no')
         return ret
 
@@ -48,7 +48,7 @@ class PayeeSerializer(serializers.ModelSerializer):
 
     def to_internal_value(self, data):
         ret = super().to_internal_value(data)
-        if 'pan_no' in ret and ret['pan_no'] == '**********':
+        if 'pan_no' in ret and '*' in ret['pan_no']:
             ret.pop('pan_no')
         return ret
 

@@ -48,7 +48,7 @@ class PayRun(models.Model):
     acknowledged their bank details.
     """
     month = models.IntegerField(validators=[MinValueValidator(1), MaxValueValidator(12)])
-    year = models.IntegerField()
+    year = models.IntegerField(validators=[MinValueValidator(2000), MaxValueValidator(2100)])
     status = models.CharField(max_length=20,
                               choices=PayRunStatusChoices.choices,
                               default=PayRunStatusChoices.DUE)
@@ -62,6 +62,7 @@ class PayRun(models.Model):
     class Meta:
         verbose_name = _("Pay Run")
         verbose_name_plural = _("Pay Runs")
+        unique_together = (('month', 'year'),)
 
     def get_error_log_lines(self):
         return self.error_log.splitlines() if self.error_log else []
@@ -141,8 +142,8 @@ class Form16(models.Model):
 auditlog.register(Form16)
 
 
-class Form16Entries(models.Model):
-    financial_year = models.ForeignKey(Form16, on_delete=models.CASCADE)
+class Form16Entry(models.Model):
+    financial_year = models.ForeignKey(Form16, on_delete=models.CASCADE, related_name='entries')
     payee = models.ForeignKey(Payee, on_delete=models.SET_NULL, null=True,
                               blank=True)
     form_16 = models.FileField(upload_to=form16_extracted_path)
@@ -150,5 +151,9 @@ class Form16Entries(models.Model):
     def __str__(self):
         return os.path.basename(self.form_16.name)
 
+    class Meta:
+        verbose_name = "Form 16 Entry"
+        verbose_name_plural = "Form 16 Entries"
 
-auditlog.register(Form16Entries)
+
+auditlog.register(Form16Entry)

@@ -4,7 +4,7 @@ import re
 from celery import shared_task
 from decimal import Decimal
 
-from .models import (PayRun, Payment, PayRunStatusChoices, PayRecordRegister, Form16, Form16Entries)
+from .models import (PayRun, Payment, PayRunStatusChoices, PayRecordRegister, Form16, Form16Entry)
 from payees.models import Payee, BankDetails
 import os
 import zipfile
@@ -134,7 +134,7 @@ def extract_form16_zip_task(form16_id):
                         continue
 
                     # Idempotency check: Skip if entry already exists for this financial year and filename
-                    if Form16Entries.objects.filter(financial_year=instance, form_16__contains=cleaned_filename).exists():
+                    if Form16Entry.objects.filter(financial_year=instance, form_16__contains=cleaned_filename).exists():
                         logger.info(f"Form 16 entry for {cleaned_filename} already exists. Skipping.")
                         continue
 
@@ -144,7 +144,7 @@ def extract_form16_zip_task(form16_id):
                         logger.warning(f"Payee with PAN {pan_no} not found for file {cleaned_filename}. Skipping orphan creation.")
                         continue
 
-                    new_entry = Form16Entries(financial_year=instance, payee=payee)
+                    new_entry = Form16Entry(financial_year=instance, payee=payee)
                     new_entry.form_16.save(cleaned_filename, ContentFile(file_content), save=True)
 
         instance.is_extracted = True

@@ -1,14 +1,14 @@
 from rest_framework import serializers
-from .models import PayRun, Payment, PayRecordRegister, Form16, Form16Entries
+from .models import PayRun, Payment, PayRecordRegister, Form16, Form16Entry
 
 class Form16EntrySerializer(serializers.ModelSerializer):
     class Meta:
-        model = Form16Entries
+        model = Form16Entry
         fields = ['id', 'financial_year', 'form_16']
         read_only_fields = ['id', 'financial_year', 'form_16']
 
 class Form16Serializer(serializers.ModelSerializer):
-    entries = Form16EntrySerializer(source='form16entries_set', many=True, read_only=True)
+    entries = Form16EntrySerializer(many=True, read_only=True)
     class Meta:
         model = Form16
         fields = ['id', 'financial_year', 'uploaded_on', 'form16_zip_file', 'is_extracted', 'entries']

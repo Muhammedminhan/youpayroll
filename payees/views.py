@@ -25,8 +25,9 @@ class BankDetailViewSet(mixins.CreateModelMixin,
         return BankDetails.objects.filter(payee__user=self.request.user)
 
     def perform_create(self, serializer):
-        payee = Payee.objects.filter(user=self.request.user).first()
-        if not payee:
+        try:
+            payee = Payee.objects.get(user=self.request.user)
+        except Payee.DoesNotExist:
             raise ValidationError({"detail": "User is not registered as a payee."})
         serializer.save(payee=payee)
 
@@ -46,7 +47,8 @@ class BankDetailAcknowledgementViewSet(mixins.CreateModelMixin,
         return BankDetailsAck.objects.filter(payee__user=self.request.user)
 
     def perform_create(self, serializer):
-        payee = Payee.objects.filter(user=self.request.user).first()
-        if not payee:
+        try:
+            payee = Payee.objects.get(user=self.request.user)
+        except Payee.DoesNotExist:
             raise ValidationError({"detail": "User is not registered as a payee."})
         serializer.save(payee=payee)

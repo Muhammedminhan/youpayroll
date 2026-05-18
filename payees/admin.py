@@ -4,7 +4,7 @@ from django.contrib.auth.models import User
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.urls import reverse
 from django.utils.html import format_html
-from payees.constants import RESTRICTED_PAYEE_GROUP
+from payees.constants import RESTRICTED_PAYEE_GROUPS
 from payroll.admin import Form16Inline
 from .models import (Payee, BankDetails, BankDetailsAck)
 from .utils import restrict_queryset_by_group
@@ -17,7 +17,7 @@ class CustomUserAdmin(BaseUserAdmin):
 
     def get_list_filter(self, request):
         # Restrict filters for users in restricted groups
-        if request.user.groups.filter(name__in=RESTRICTED_PAYEE_GROUP).exists():
+        if request.user.groups.filter(name__in=RESTRICTED_PAYEE_GROUPS).exists():
             return ()  # Return empty tuple to hide all filters
         return super().get_list_filter(request)
 
@@ -107,7 +107,7 @@ class BankDetailsAdmin(admin.ModelAdmin):
 
     def change_view(self, request, object_id, form_url='', extra_context=None):
         # Show the message only if the current user is in one of the restricted groups
-        if request.user.groups.filter(name__in=RESTRICTED_PAYEE_GROUP).exists():
+        if request.user.groups.filter(name__in=RESTRICTED_PAYEE_GROUPS).exists():
             messages.info(
                 request,
                 "Please take a screenshot once you go through all of the bank details and acknowledge it."
@@ -182,7 +182,7 @@ class BankDetailsAckAdmin(admin.ModelAdmin):
 
     def has_add_permission(self, request):
         # Superusers and HR can always add
-        if request.user.is_superuser and not request.user.groups.filter(name__in=RESTRICTED_PAYEE_GROUP).exists():
+        if request.user.is_superuser and not request.user.groups.filter(name__in=RESTRICTED_PAYEE_GROUPS).exists():
             return True
 
         # Get the payee object for the user

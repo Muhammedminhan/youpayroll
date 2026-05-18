@@ -1,6 +1,7 @@
-from django.core.management.base import BaseCommand
+from django.core.management.base import BaseCommand, CommandError
 from django.apps import apps
 from payroll.utils import repair_fk_on_delete_rules
+import re
 
 class Command(BaseCommand):
     help = 'Audits and repairs PostgreSQL foreign key ON DELETE rules to match ORM models.'
@@ -25,8 +26,6 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         # argparse converts '--lock-timeout' to 'lock_timeout'
-        import re
-        from django.core.management.base import CommandError
 
         lock_timeout = options['lock_timeout']
         if not re.match(r'^\d+(ms|s|min)?$', lock_timeout):

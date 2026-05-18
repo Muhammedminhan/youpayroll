@@ -44,21 +44,26 @@ def fetch_details(payee_id):
             return
         
         if fetched_data:
+            updated_fields = []
             full_name = f"{fetched_data.get('FirstName', '')} {fetched_data.get('LastName', '')}".strip()
-            if full_name:
+            if full_name and payee.full_name != full_name:
                 payee.full_name = full_name
+                updated_fields.append('full_name')
             
             email = fetched_data.get("EmailID")
-            if email:
+            if email and payee.email != email:
                 payee.email = email
+                updated_fields.append('email')
                 
             pan = fetched_data.get("Pan_Number")
-            if pan:
+            if pan and payee.pan_no != pan:
                 payee.pan_no = pan
+                updated_fields.append('pan_no')
                 
             addr = fetched_data.get("Permanent_Address")
-            if addr:
+            if addr and payee.address != addr:
                 payee.address = addr
+                updated_fields.append('address')
                 
             doj = fetched_data.get("Dateofjoining")
             if doj:
@@ -70,13 +75,13 @@ def fetch_details(payee_id):
                         break
                     except ValueError:
                         continue
-                if parsed_date:
-                    payee.date_of_joining = parsed_date.isoformat()
-                else:
-                    logger.warning(f"Could not parse Dateofjoining '{doj}' into a standard format. Saving raw.")
-                    payee.date_of_joining = doj
+                new_doj = parsed_date.isoformat() if parsed_date else doj
+                if payee.date_of_joining != new_doj:
+                    payee.date_of_joining = new_doj
+                    updated_fields.append('date_of_joining')
                 
-            try:
-                payee.save()
-            except IntegrityError as e:
-                logger.error(f"IntegrityError saving payee {payee_id} (possible duplicate PAN): {e}")
+            if updated_fields:
+                try:
+                    payee.save(update_fields=updated_fields)
+                except IntegrityError as e:
+                    logger.error(f"IntegrityError saving payee {payee_id} with update_fields {updated_fields}: {e}")

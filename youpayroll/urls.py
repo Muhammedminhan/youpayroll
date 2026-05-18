@@ -23,7 +23,9 @@ urlpatterns = [
     # Legacy Health Path (compatible with existing Helm/Ingress configs)
     path('health/', LegacyHealthCheck.as_view(), name='health_legacy'),
     
-    # GraphQL - CSRF enforcement is handled via Authentication classes in settings
+    # GraphQL - csrf_exempt is used because authentication is strictly Token-based (stateless API).
+    # WARNING: If session-cookie (stateful) authentication is ever added/supported in the future,
+    # you MUST remove csrf_exempt and enforce standard Django CSRF middleware/checks on this view.
     path('graphql/', csrf_exempt(FileUploadGraphQLView.as_view(graphiql=getattr(settings, 'ENABLE_GRAPHIQL', False),
                                                                 schema=schema))),
     path('accounts/', include('allauth.urls')),
