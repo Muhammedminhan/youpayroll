@@ -10,7 +10,7 @@ def update_payee_acknowledgement(sender, instance, created, **kwargs):
     """
     Mark bank details as acknowledged when an approval is recorded.
     """
-    if created and instance.is_approved:
+    if instance.is_approved:
         # Use the explicit relation instead of non-deterministic lookup
         bank_details = instance.bank_details
         if bank_details:

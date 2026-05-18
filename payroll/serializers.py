@@ -29,6 +29,11 @@ class PayRunSerializer(serializers.ModelSerializer):
         read_only_fields = ['created_at', 'error_log']
 
 class PayRecordRegisterSerializer(serializers.ModelSerializer):
+    account_number = serializers.SerializerMethodField()
+    ifsc_code = serializers.SerializerMethodField()
+    micr_code = serializers.SerializerMethodField()
+    swift_code = serializers.SerializerMethodField()
+
     class Meta:
         model = PayRecordRegister
         fields = [
@@ -37,4 +42,23 @@ class PayRecordRegisterSerializer(serializers.ModelSerializer):
             'account_type', 'ifsc_code', 'micr_code', 'swift_code',
             'branch_address', 'tds_percentage', 'gross_amount', 'net_income'
         ]
-        read_only_fields = fields 
+        # Make all fields read-only
+        read_only_fields = fields
+
+    def get_account_number(self, obj):
+        acc = obj.account_number or ""
+        if len(acc) <= 4:
+            return "****"
+        return f"****{acc[-4:]}"
+
+    def get_ifsc_code(self, obj):
+        ifsc = obj.ifsc_code or ""
+        return "****" if ifsc else ""
+
+    def get_micr_code(self, obj):
+        micr = obj.micr_code or ""
+        return "****" if micr else ""
+
+    def get_swift_code(self, obj):
+        swift = obj.swift_code or ""
+        return "****" if swift else ""

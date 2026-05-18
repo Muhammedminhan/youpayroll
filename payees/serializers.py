@@ -35,9 +35,9 @@ class PayeeSerializer(serializers.ModelSerializer):
     def get_pan_no(self, obj):
         # Mask PAN: fixed width masking to avoid length/pattern leaks
         pan = obj.pan_no or ""
-        if not pan:
-            return ""
-        return "**********"
+        if not pan or len(pan) <= 2:
+            return "**********"
+        return f"********{pan[-2:]}"
 
 class BankDetailAcknowledgementSerializer(serializers.ModelSerializer):
     class Meta:

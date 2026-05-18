@@ -16,8 +16,8 @@ class Migration(migrations.Migration):
             name='ZohoPeopleFormToken',
             fields=[
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('access_token', encrypted_model_fields.fields.EncryptedCharField()),
-                ('refresh_token', encrypted_model_fields.fields.EncryptedCharField(blank=True, null=True)),
+                ('access_token', encrypted_model_fields.fields.EncryptedCharField(max_length=1024)),
+                ('refresh_token', encrypted_model_fields.fields.EncryptedCharField(blank=True, max_length=1024, null=True)),
                 ('created', models.DateTimeField(auto_now_add=True)),
             ],
             options={

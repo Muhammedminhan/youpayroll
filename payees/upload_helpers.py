@@ -15,9 +15,7 @@ def validate_image(file):
 
 
 def user_directory_path(instance, filename):
-    # File will be uploaded to
-    # MEDIA_ROOT/uploads/payees/bank-acknowledgement/user_<hrm_id
-    # >/<filename>
+    # File will be uploaded to MEDIA_ROOT/uploads/payees/bank-acknowledgement/user_<hrm_id>/<filename>
     base_filename, file_extension = os.path.splitext(filename)
     timestamp = timezone.now().strftime('%Y%m%d%H%M%S')
     safe_filename = f"{base_filename}_{timestamp}{file_extension}"

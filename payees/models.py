@@ -1,6 +1,6 @@
 from django.utils.translation import gettext_lazy as _
 from django.core.validators import FileExtensionValidator
-from django.db import models, transaction
+from django.db import models
 from safedelete.models import SafeDeleteModel
 from django.contrib.auth.models import User
 from auditlog.registry import auditlog
@@ -75,6 +75,8 @@ class BankDetails(models.Model):
         tracked_fields = self._original_state.keys()
         if any(getattr(self, f) != self._original_state[f] for f in tracked_fields):
             self.payee_acknowledgement = False
+            if 'update_fields' in kwargs and 'payee_acknowledgement' not in kwargs['update_fields']:
+                kwargs['update_fields'] = list(kwargs['update_fields']) + ['payee_acknowledgement']
         super().save(*args, **kwargs)
         self._set_state_snapshot() # Refresh snapshot after save
 

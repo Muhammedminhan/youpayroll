@@ -1,5 +1,6 @@
 import logging
 from celery import shared_task
+from django.db import IntegrityError
 from .models import Payee
 from zohopeople.utils import get_payees_details
 
@@ -39,11 +40,8 @@ def fetch_details(payee_id):
         if isinstance(fetched_data, list) and fetched_data:
             fetched_data = fetched_data[0]
         else:
-            fetched_data = None
-            for key, value in response_data_list.items():
-                if isinstance(value, list) and value:
-                    fetched_data = value[0]
-                    break
+            logger.warning(f"No valid Employee record found in Zoho response for {payee_id}")
+            return
         
         if fetched_data:
             full_name = f"{fetched_data.get('FirstName', '')} {fetched_data.get('LastName', '')}".strip()
@@ -66,4 +64,7 @@ def fetch_details(payee_id):
             if doj:
                 payee.date_of_joining = doj
                 
-            payee.save()
+            try:
+                payee.save()
+            except IntegrityError as e:
+                logger.error(f"IntegrityError saving payee {payee_id} (possible duplicate PAN): {e}")

@@ -26,7 +26,7 @@ def call_token_generation_api(url, data):
         return None
 
 
-def generate_access_token():
+def generate_access_token(force=False):
     """
     Calls the zoho people API to generate access token using refresh token.
     Uses a lightweight check before entering a blocking network call.
@@ -41,7 +41,7 @@ def generate_access_token():
         logger.error("No refresh token found in database.")
         return None
 
-    if token_obj.access_token and token_obj.last_refreshed_at:
+    if not force and token_obj.access_token and token_obj.last_refreshed_at:
         if (timezone.now() - token_obj.last_refreshed_at).total_seconds() < 300:
             logger.info("Token was recently refreshed. Skipping network call.")
             resp = requests.Response()
@@ -84,7 +84,9 @@ def generate_access_token():
 
 def get_emp_access_token():
     """Fetch Access token from the DB and return the latest Access token."""
-    latest_token_obj = ZohoPeopleFormToken.objects.order_by('-created').only('access_token').first()
+    latest_token_obj = ZohoPeopleFormToken.objects.filter(
+        refresh_token__isnull=False, access_token__isnull=False
+    ).order_by('-created').only('access_token').first()
     if not latest_token_obj:
         return None
     return latest_token_obj.access_token
@@ -109,7 +111,7 @@ def get_payees_details(emp_id, retry=True):
         if response.status_code == 200:
             return response
         elif response.status_code == 401 and retry:
-            gen_resp = generate_access_token()
+            gen_resp = generate_access_token(force=True)
             if gen_resp and gen_resp.status_code == 200:
                 return get_payees_details(emp_id, retry=False)
             return None

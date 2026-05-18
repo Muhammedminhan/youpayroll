@@ -10,7 +10,7 @@ def main():
     warnings.filterwarnings("ignore", category=FutureWarning, module="google.auth.*")
     warnings.filterwarnings("ignore", category=FutureWarning, module="google.oauth2.*")
 
-    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'youpayroll.settings.development')
+    # os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'youpayroll.settings.development')
 
     try:
         from django.core.management import execute_from_command_line

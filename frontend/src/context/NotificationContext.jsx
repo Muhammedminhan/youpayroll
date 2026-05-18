@@ -10,7 +10,7 @@ export const NotificationProvider = ({ children }) => {
     const [loading, setLoading] = useState(false);
 
     const fetchNotifications = useCallback(async () => {
-        const token = localStorage.getItem('token');
+        const token = sessionStorage.getItem('token') || localStorage.getItem('token');
         if (!token || !isAuthenticated) return;
 
         try {
@@ -48,7 +48,7 @@ export const NotificationProvider = ({ children }) => {
     }, [fetchNotifications, isAuthenticated]);
 
     const markAsRead = async (notifId) => {
-        const token = localStorage.getItem('token');
+        const token = sessionStorage.getItem('token') || localStorage.getItem('token');
         if (!token) return;
 
         try {

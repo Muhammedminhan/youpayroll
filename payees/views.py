@@ -1,5 +1,5 @@
 from rest_framework import viewsets, permissions, mixins
-from django.shortcuts import get_object_or_404
+from rest_framework.exceptions import ValidationError
 from .models import Payee, BankDetails, BankDetailsAck
 from .serializers import PayeeSerializer, BankDetailSerializer, BankDetailAcknowledgementSerializer
 
@@ -25,7 +25,9 @@ class BankDetailViewSet(mixins.CreateModelMixin,
         return BankDetails.objects.filter(payee__user=self.request.user)
 
     def perform_create(self, serializer):
-        payee = get_object_or_404(Payee, user=self.request.user)
+        payee = Payee.objects.filter(user=self.request.user).first()
+        if not payee:
+            raise ValidationError({"detail": "User is not registered as a payee."})
         serializer.save(payee=payee)
 
 class BankDetailAcknowledgementViewSet(mixins.CreateModelMixin,
@@ -44,5 +46,7 @@ class BankDetailAcknowledgementViewSet(mixins.CreateModelMixin,
         return BankDetailsAck.objects.filter(payee__user=self.request.user)
 
     def perform_create(self, serializer):
-        payee = get_object_or_404(Payee, user=self.request.user)
+        payee = Payee.objects.filter(user=self.request.user).first()
+        if not payee:
+            raise ValidationError({"detail": "User is not registered as a payee."})
         serializer.save(payee=payee)

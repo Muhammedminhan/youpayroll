@@ -15,6 +15,11 @@ if [ "$DATABASE" = "postgres" ]; then
     echo "PostgreSQL started"
 fi
 
+if [ -z "$DJANGO_SETTINGS_MODULE" ]; then
+    echo "ERROR: DJANGO_SETTINGS_MODULE is not set."
+    exit 1
+fi
+
 # Run migrations
 echo "Running migrations..."
 python manage.py migrate --noinput
