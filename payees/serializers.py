@@ -57,6 +57,6 @@ class BankDetailAcknowledgementSerializer(serializers.ModelSerializer):
         model = BankDetailsAck
         fields = [
             'id', 'uploaded_date', 'bank_details_screenshot',
-            'is_approved', 'correction_comments'
+            'is_approved', 'correction_comments', 'bank_details'
         ]
         read_only_fields = ['payee', 'uploaded_date', 'is_approved', 'correction_comments']

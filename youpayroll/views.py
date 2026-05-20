@@ -48,7 +48,7 @@ class DRFTokenAuthGraphQLView(FileUploadGraphQLView):
     """
     A custom GraphQL view that enforces token-only authentication using DRF's 
     TokenAuthentication. It bypasses and ignores Django's cookie-based SessionAuthentication 
-    to protect the endpoint against CSRF attacks.
+    to protect the endpoint against CSRF attacks, and returns HTTP 401 response if missing or invalid.
     """
     def dispatch(self, request, *args, **kwargs):
         authenticator = TokenAuthentication()
@@ -57,10 +57,10 @@ class DRFTokenAuthGraphQLView(FileUploadGraphQLView):
             if auth_res is not None:
                 request.user, request.auth = auth_res
             else:
-                request.user = AnonymousUser()
-                request.auth = None
-        except AuthenticationFailed:
-            request.user = AnonymousUser()
-            request.auth = None
+                from django.http import JsonResponse
+                return JsonResponse({"detail": "Authentication credentials were not provided."}, status=401)
+        except AuthenticationFailed as exc:
+            from django.http import JsonResponse
+            return JsonResponse({"detail": str(exc)}, status=401)
         return super().dispatch(request, *args, **kwargs)
 

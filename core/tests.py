@@ -54,14 +54,22 @@ class DRFTokenAuthGraphQLViewTest(TestCase):
         self.token = Token.objects.create(user=self.user)
 
     def test_session_auth_bypassed(self):
-        # Even if a request has a session-authenticated user, it should be ignored/set to AnonymousUser
+        # Even if a request has a session-authenticated user, it should be ignored/rejected because it lacks a token
         req = self.factory.post("/graphql/")
         req.user = self.user  # Simulate SessionMiddleware setting user
         
         view = DRFTokenAuthGraphQLView()
-        with patch("graphene_file_upload.django.FileUploadGraphQLView.dispatch", lambda s, r, *a, **k: r):
-            result_req = view.dispatch(req)
-            self.assertIsInstance(result_req.user, AnonymousUser)
+        response = view.dispatch(req)
+        self.assertEqual(response.status_code, 401)
+        self.assertIn("Authentication credentials were not provided", response.content.decode())
+
+    def test_invalid_token_rejected(self):
+        req = self.factory.post("/graphql/", HTTP_AUTHORIZATION="Token invalidkey")
+        req.user = AnonymousUser()
+        
+        view = DRFTokenAuthGraphQLView()
+        response = view.dispatch(req)
+        self.assertEqual(response.status_code, 401)
 
     def test_token_auth_succeeds(self):
         # A request with a valid DRF Token header should be authenticated correctly
