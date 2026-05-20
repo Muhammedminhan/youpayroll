@@ -9,11 +9,7 @@ RUN chown -R ygag /ygag
 
 ENV PATH "$PATH:/ygag/.local/bin"
 
-# Add packages to the image
-ADD ./deployment/app/packages/apk/base /ygag/packages/apk/base
-
-# Install dependencies
+# Install runtime dependencies directly from apk repositories
 RUN apk update && \
-    apk add --no-cache --no-network /ygag/packages/apk/base/* && \
-    pip3.11 install --no-cache-dir --upgrade pip==24.0 && \
-    rm -rf /ygag/packages/apk
+    apk add --no-cache libpq libjpeg-turbo zlib libffi netcat-openbsd && \
+    pip3.11 install --no-cache-dir --upgrade pip==24.0

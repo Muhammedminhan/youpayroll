@@ -81,3 +81,107 @@ class DRFTokenAuthGraphQLViewTest(TestCase):
             result_req = view.dispatch(req)
             self.assertEqual(result_req.user, self.user)
             self.assertEqual(result_req.auth, self.token)
+
+
+class GraphQLMaskingTest(TestCase):
+    def setUp(self):
+        from payees.models import Payee
+        from payroll.models import PayRun, PayRecordRegister
+        
+        self.user = User.objects.create_user(username="testpayee", password="password")
+        self.payee = Payee.objects.create(
+            hrm_id="HR001",
+            user=self.user,
+            full_name="Test Payee"
+        )
+        self.pay_run = PayRun.objects.create(month=5, year=2026)
+        self.register = PayRecordRegister.objects.create(
+            payee=self.payee,
+            pay_run=self.pay_run,
+            amount=1000.00,
+            account_number="1234567890",
+            ifsc_code="IFSC001",
+            micr_code="MICR001",
+            swift_code="SWIFT001",
+            branch_address="123 Main St"
+        )
+
+    def test_pay_record_register_graphql_masking(self):
+        from graphene.test import Client
+        from youpayroll.schema import schema
+
+        query = """
+        query {
+            allPayRecordRegister {
+                amount
+                accountNumber
+                ifscCode
+                micrCode
+                swiftCode
+                branchAddress
+            }
+        }
+        """
+        class DummyContext:
+            user = self.user
+
+        client = Client(schema)
+        result = client.execute(query, context=DummyContext())
+        
+        # Verify no errors occurred
+        self.assertNotIn("errors", result)
+        
+        # Verify the returned data
+        data = result["data"]["allPayRecordRegister"][0]
+        self.assertEqual(float(data["amount"]), 1000.00)
+        self.assertEqual(data["accountNumber"], "****7890")
+        self.assertEqual(data["ifscCode"], "****")
+        self.assertEqual(data["micrCode"], "****")
+        self.assertEqual(data["swiftCode"], "****")
+        self.assertEqual(data["branchAddress"], "****")
+
+    def test_pay_record_register_graphql_masking_empty(self):
+        from graphene.test import Client
+        from youpayroll.schema import schema
+        from payroll.models import PayRun, PayRecordRegister
+
+        # Create another register with empty/None fields
+        empty_register = PayRecordRegister.objects.create(
+            payee=self.payee,
+            pay_run=PayRun.objects.create(month=6, year=2026),
+            amount=500.00,
+            account_number=None,
+            ifsc_code="",
+            micr_code=None,
+            swift_code="",
+            branch_address=None
+        )
+
+        query = """
+        query {
+            allPayRecordRegister {
+                amount
+                accountNumber
+                ifscCode
+                micrCode
+                swiftCode
+                branchAddress
+            }
+        }
+        """
+        class DummyContext:
+            user = self.user
+
+        client = Client(schema)
+        result = client.execute(query, context=DummyContext())
+        
+        self.assertNotIn("errors", result)
+        
+        # Since order_by is -record_created, the empty_register is the first one in response
+        data = result["data"]["allPayRecordRegister"][0]
+        self.assertEqual(float(data["amount"]), 500.00)
+        self.assertEqual(data["accountNumber"], "")
+        self.assertEqual(data["ifscCode"], "")
+        self.assertEqual(data["micrCode"], "")
+        self.assertEqual(data["swiftCode"], "")
+        self.assertEqual(data["branchAddress"], "")

@@ -54,7 +54,9 @@ class PayRecordRegisterSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
     def get_account_number(self, obj):
-        acc = obj.account_number or ""
+        acc = obj.account_number
+        if not acc:
+            return ""
         if len(acc) <= 4:
             return "****"
         return f"****{acc[-4:]}"

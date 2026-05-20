@@ -16,6 +16,30 @@ class PayRecordRegisterType(DjangoObjectType):
                   'micr_code', 'swift_code', 'branch_address',
                   'tds_percentage', 'gross_amount')
 
+    def resolve_account_number(self, info):
+        acc = self.account_number
+        if not acc:
+            return ""
+        if len(acc) <= 4:
+            return "****"
+        return f"****{acc[-4:]}"
+
+    def resolve_ifsc_code(self, info):
+        ifsc = self.ifsc_code or ""
+        return "****" if ifsc else ""
+
+    def resolve_micr_code(self, info):
+        micr = self.micr_code or ""
+        return "****" if micr else ""
+
+    def resolve_swift_code(self, info):
+        swift = self.swift_code or ""
+        return "****" if swift else ""
+
+    def resolve_branch_address(self, info):
+        addr = self.branch_address or ""
+        return "****" if addr else ""
+
 
 class PaymentType(DjangoObjectType):
     """

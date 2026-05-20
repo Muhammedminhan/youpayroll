@@ -8,11 +8,8 @@ WORKDIR /ygag
 
 ADD requirements.txt /ygag/requirements.txt
 
-# Add packages to the image
-ADD ./deployment/app/packages/apk/req /ygag/packages/apk/req
-
+# Install build dependencies directly from apk repositories, install python requirements, and clean up build dependencies
 RUN apk update && \
-    apk add --no-cache --no-network --virtual .build-deps /ygag/packages/apk/req/* && \
+    apk add --no-cache --virtual .build-deps gcc musl-dev postgresql-dev libjpeg-turbo-dev zlib-dev libffi-dev && \
     pip3.11 install --extra-index-url=$YGAG_PIP_PRIVATE_REPO_URL --no-cache-dir -r requirements.txt && \
-    apk del .build-deps && \
-    rm -rf /ygag/packages/apk
+    apk del .build-deps

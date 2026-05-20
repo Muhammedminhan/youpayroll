@@ -1,5 +1,4 @@
 import React from 'react';
-import { X } from 'lucide-react';
 
 const LogoutModal = ({ isOpen, onClose, onConfirm }) => {
     if (!isOpen) return null;
