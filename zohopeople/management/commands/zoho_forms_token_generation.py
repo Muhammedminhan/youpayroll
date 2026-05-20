@@ -1,5 +1,4 @@
 import json
-import logging
 from django.utils import timezone
 from decouple import config
 from django.core.management.base import BaseCommand
@@ -8,7 +7,6 @@ from zohopeople.constants import (GRANT_TYPE, ZP_API_REDIR_URI,
 from zohopeople.models import ZohoPeopleFormToken
 from zohopeople.utils import call_token_generation_api
 
-logger = logging.getLogger(__name__)
 
 REDACTED_KEYS = {'access_token', 'refresh_token', 'id_token', 'client_secret', 'code'}
 
