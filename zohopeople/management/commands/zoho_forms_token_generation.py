@@ -43,7 +43,14 @@ def zoho_form_token_generation(grant_token, stdout, stderr, style):
     tgeneration_resp = call_token_generation_api(url, tgeneration_data)
 
     if tgeneration_resp and tgeneration_resp.status_code == 200:
-        tgeneration_resp_val = tgeneration_resp.json()
+        try:
+            tgeneration_resp_val = tgeneration_resp.json()
+        except ValueError:
+            stderr.write(style.ERROR(
+                f"Error: Token endpoint returned HTTP 200 but body is not valid JSON "
+                f"(body length: {len(tgeneration_resp.text)} chars)."
+            ))
+            return
 
         if 'access_token' in tgeneration_resp_val and 'refresh_token' in tgeneration_resp_val:
             # Store or update tokens in the DB using a concurrency-safe singleton pattern.
