@@ -82,6 +82,16 @@ class DRFTokenAuthGraphQLViewTest(TestCase):
             self.assertEqual(result_req.user, self.user)
             self.assertEqual(result_req.auth, self.token)
 
+    def test_options_request_bypasses_auth(self):
+        # CORS preflight OPTIONS requests are sent without headers; they should bypass token auth completely
+        req = self.factory.options("/graphql/")
+        req.user = AnonymousUser()
+        
+        view = DRFTokenAuthGraphQLView()
+        with patch("graphene_file_upload.django.FileUploadGraphQLView.dispatch", lambda s, r, *a, **k: "options_dispatched"):
+            response = view.dispatch(req)
+            self.assertEqual(response, "options_dispatched")
+
 
 class GraphQLMaskingTest(TestCase):
     def setUp(self):

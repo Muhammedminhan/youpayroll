@@ -49,6 +49,10 @@ class DRFTokenAuthGraphQLView(FileUploadGraphQLView):
     to protect the endpoint against CSRF attacks, and returns HTTP 401 response if missing or invalid.
     """
     def dispatch(self, request, *args, **kwargs):
+        # CORS preflight OPTIONS requests are sent without authorization headers; bypass token auth.
+        if request.method == 'OPTIONS':
+            return super().dispatch(request, *args, **kwargs)
+
         authenticator = TokenAuthentication()
         try:
             auth_res = authenticator.authenticate(request)
