@@ -52,30 +52,22 @@ def zoho_form_token_generation(grant_token, stdout, stderr, style):
             from django.db import transaction, IntegrityError
             try:
                 with transaction.atomic():
-                    token_obj = ZohoPeopleFormToken.objects.select_for_update().order_by('-created').first()
-                    if not token_obj:
-                        raise ZohoPeopleFormToken.DoesNotExist
+                    ZohoPeopleFormToken.objects.update_or_create(
+                        id=1,
+                        defaults={
+                            'access_token': tgeneration_resp_val['access_token'],
+                            'refresh_token': tgeneration_resp_val['refresh_token'],
+                            'last_refreshed_at': timezone.now()
+                        }
+                    )
+            except IntegrityError:
+                # Fallback if updated concurrently by another process
+                with transaction.atomic():
+                    token_obj = ZohoPeopleFormToken.objects.select_for_update().get(id=1)
                     token_obj.access_token = tgeneration_resp_val['access_token']
                     token_obj.refresh_token = tgeneration_resp_val['refresh_token']
                     token_obj.last_refreshed_at = timezone.now()
                     token_obj.save()
-            except ZohoPeopleFormToken.DoesNotExist:
-                try:
-                    with transaction.atomic():
-                        ZohoPeopleFormToken.objects.create(
-                            access_token=tgeneration_resp_val['access_token'],
-                            refresh_token=tgeneration_resp_val['refresh_token'],
-                            last_refreshed_at=timezone.now()
-                        )
-                except IntegrityError:
-                    # Fallback if created concurrently by another process
-                    with transaction.atomic():
-                        token_obj = ZohoPeopleFormToken.objects.select_for_update().order_by('-created').first()
-                        if token_obj:
-                            token_obj.access_token = tgeneration_resp_val['access_token']
-                            token_obj.refresh_token = tgeneration_resp_val['refresh_token']
-                            token_obj.last_refreshed_at = timezone.now()
-                            token_obj.save()
             stdout.write(style.SUCCESS("Tokens generated and stored/updated successfully."))
         else:
             redacted_body = redact_sensitive_data(tgeneration_resp_val)

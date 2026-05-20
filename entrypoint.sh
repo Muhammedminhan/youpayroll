@@ -1,7 +1,8 @@
 #!/bin/sh
 
-# Print the value of the DATABASE environment variable
-echo "$DATABASE"
+# Log only a safe, non-sensitive summary of the DB engine (never log raw DSNs/credentials)
+db_engine_summary=$(echo "${DATABASE_ENGINE:-$DATABASE}" | sed 's/.*\.//' | cut -c1-32)
+echo "Database engine: ${db_engine_summary}"
 
 # Check if wait-for-postgres is requested or if PostgreSQL is the active engine
 if [ "$DATABASE" = "postgres" ] || echo "$DATABASE_ENGINE" | grep -iq "postgres"; then

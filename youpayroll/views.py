@@ -1,7 +1,10 @@
 import logging
-from django.views import View
-from django.http import HttpResponse
 from django.db import connection
+from django.http import HttpResponse, JsonResponse
+from django.views import View
+from graphene_file_upload.django import FileUploadGraphQLView
+from rest_framework.authentication import TokenAuthentication
+from rest_framework.exceptions import AuthenticationFailed
 
 logger = logging.getLogger(__name__)
 
@@ -39,14 +42,10 @@ class LegacyHealthCheck(LivenessCheck):
     pass
 
 
-from graphene_file_upload.django import FileUploadGraphQLView
-from rest_framework.authentication import TokenAuthentication
-from rest_framework.exceptions import AuthenticationFailed
-
 class DRFTokenAuthGraphQLView(FileUploadGraphQLView):
     """
-    A custom GraphQL view that enforces token-only authentication using DRF's 
-    TokenAuthentication. It bypasses and ignores Django's cookie-based SessionAuthentication 
+    A custom GraphQL view that enforces token-only authentication using DRF's
+    TokenAuthentication. It bypasses and ignores Django's cookie-based SessionAuthentication
     to protect the endpoint against CSRF attacks, and returns HTTP 401 response if missing or invalid.
     """
     def dispatch(self, request, *args, **kwargs):
@@ -56,10 +55,8 @@ class DRFTokenAuthGraphQLView(FileUploadGraphQLView):
             if auth_res is not None:
                 request.user, request.auth = auth_res
             else:
-                from django.http import JsonResponse
                 return JsonResponse({"detail": "Authentication credentials were not provided."}, status=401)
         except AuthenticationFailed as exc:
-            from django.http import JsonResponse
             return JsonResponse({"detail": str(exc)}, status=401)
         return super().dispatch(request, *args, **kwargs)
 
