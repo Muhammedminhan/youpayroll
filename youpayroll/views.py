@@ -39,7 +39,6 @@ class LegacyHealthCheck(LivenessCheck):
     pass
 
 
-from django.contrib.auth.models import AnonymousUser
 from graphene_file_upload.django import FileUploadGraphQLView
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.exceptions import AuthenticationFailed

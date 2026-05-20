@@ -130,18 +130,18 @@ def extract_form16_zip_task(form16_id):
                     
                     # Validate PAN format (5 letters, 4 digits, 1 letter)
                     if not re.match(r'^[A-Z]{5}\d{4}[A-Z]$', pan_no):
-                        logger.warning(f"Invalid PAN format '{pan_no}' derived from file '{cleaned_filename}'. Skipping.")
+                        logger.warning("Invalid PAN format '%s' derived from file %r. Skipping.", pan_no, cleaned_filename)
                         continue
 
                     # Idempotency check: Skip if entry already exists for this financial year and filename
                     if Form16Entry.objects.filter(financial_year=instance, form_16__contains=cleaned_filename).exists():
-                        logger.info(f"Form 16 entry for {cleaned_filename} already exists. Skipping.")
+                        logger.info("Form 16 entry for %r already exists. Skipping.", cleaned_filename)
                         continue
 
                     try:
                         payee = Payee.objects.get(pan_no=pan_no)
                     except Payee.DoesNotExist:
-                        logger.warning(f"Payee with PAN {pan_no} not found for file {cleaned_filename}. Skipping orphan creation.")
+                        logger.warning("Payee with PAN %s not found for file %r. Skipping orphan creation.", pan_no, cleaned_filename)
                         continue
 
                     new_entry = Form16Entry(financial_year=instance, payee=payee)
