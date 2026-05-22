@@ -123,6 +123,34 @@ class BankDetailsTest(TestCase):
         )
         self.assertEqual(BankDetailsAck.objects.filter(bank_details=self.bank_details).count(), 1)
 
+    def test_bank_details_change_preserves_acknowledgements_when_save_fails(self):
+        import io
+        from PIL import Image
+
+        image = io.BytesIO()
+        Image.new('RGB', (10, 10), color='white').save(image, format='PNG')
+        image.seek(0)
+
+        ack = BankDetailsAck.objects.create(
+            payee=self.payee,
+            bank_details=self.bank_details,
+            bank_details_screenshot=SimpleUploadedFile(
+                name='old_ack.png',
+                content=image.read(),
+                content_type='image/png',
+            ),
+        )
+
+        self.bank_details.ifsc_code = 'NEWIFSC123'
+
+        with self.assertRaises(ValueError):
+            self.bank_details.save(update_fields=['ifsc_code', 'not_a_field'])
+
+        self.bank_details.refresh_from_db()
+        self.assertTrue(BankDetailsAck.objects.filter(id=ack.id).exists())
+        self.assertNotEqual(self.bank_details.ifsc_code, 'NEWIFSC123')
+        self.assertTrue(self.bank_details.payee_acknowledgement)
+
     def test_non_tracked_field_does_not_reset_acknowledgement(self):
         # account_holder_name is tracked, but let's assume we update nothing
         self.bank_details.save()

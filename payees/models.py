@@ -118,14 +118,17 @@ class BankDetails(models.Model):
         else:
             effective_changes = changed_fields
 
-        if effective_changes:
-            if self.pk:
-                self.acknowledgements.all().delete()
-            self.payee_acknowledgement = False
-            if update_fields is not None and 'payee_acknowledgement' not in update_fields:
-                kwargs['update_fields'] = list(update_fields) + ['payee_acknowledgement']
-        
-        super().save(*args, **kwargs)
+        with transaction.atomic():
+            if effective_changes:
+                if self.pk:
+                    # Old acknowledgement screenshots attest to the prior bank details.
+                    # Deleting them invalidates that attestation; auditlog records the deletion.
+                    self.acknowledgements.all().delete()
+                self.payee_acknowledgement = False
+                if update_fields is not None and 'payee_acknowledgement' not in update_fields:
+                    kwargs['update_fields'] = list(update_fields) + ['payee_acknowledgement']
+
+            super().save(*args, **kwargs)
         self._set_state_snapshot() # Refresh snapshot after save
 
     def __str__(self):

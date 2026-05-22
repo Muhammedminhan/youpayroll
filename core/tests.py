@@ -1,5 +1,6 @@
 from unittest.mock import patch
 import datetime
+from django.conf import settings
 from django.core.cache import cache
 from django.test import TestCase, RequestFactory, override_settings
 from django.contrib.auth.models import User, AnonymousUser
@@ -51,6 +52,23 @@ class DecoratorTest(TestCase):
             
         self.assertEqual(my_resolver.__name__, "my_resolver")
         self.assertEqual(my_resolver.__doc__, "My resolver docstring")
+
+
+class ProxySecuritySettingsTest(TestCase):
+    def test_forwarded_for_middleware_runs_before_security_middleware(self):
+        self.assertLess(
+            settings.MIDDLEWARE.index('youpayroll.middleware.XForwardedForMiddleware'),
+            settings.MIDDLEWARE.index('django.middleware.security.SecurityMiddleware'),
+        )
+
+    def test_forwarded_proto_https_marks_request_secure(self):
+        request = RequestFactory().get(
+            "/api/google-login/",
+            HTTP_X_FORWARDED_PROTO="https",
+        )
+
+        self.assertEqual(settings.SECURE_PROXY_SSL_HEADER, ('HTTP_X_FORWARDED_PROTO', 'https'))
+        self.assertTrue(request.is_secure())
 
 
 class ProfileCompletionNotificationTest(TestCase):
@@ -107,6 +125,9 @@ class GoogleLoginViewTest(TestCase):
     def setUp(self):
         self.factory = APIRequestFactory()
         self.client = APIClient()
+        cache.clear()
+
+    def tearDown(self):
         cache.clear()
 
     @patch("core.views.id_token.verify_oauth2_token")
