@@ -9,7 +9,7 @@ class BankDetailSerializer(serializers.ModelSerializer):
             'account_type', 'ifsc_code', 'micr_code', 'swift_code',
             'branch_address', 'payee_acknowledgement'
         ]
-        read_only_fields = ['payee', 'payee_acknowledgement']
+        read_only_fields = ['payee_acknowledgement']
 
     def to_representation(self, instance):
         ret = super().to_representation(instance)
@@ -53,7 +53,7 @@ class BankDetailAcknowledgementSerializer(serializers.ModelSerializer):
             'id', 'uploaded_date', 'bank_details_screenshot',
             'is_approved', 'correction_comments', 'bank_details'
         ]
-        read_only_fields = ['payee', 'uploaded_date', 'is_approved', 'correction_comments']
+        read_only_fields = ['uploaded_date', 'is_approved', 'correction_comments']
 
     def validate_bank_details(self, value):
         if BankDetailsAck.objects.filter(bank_details=value).exists():
