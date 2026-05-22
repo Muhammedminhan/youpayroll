@@ -17,28 +17,22 @@ term_handler() {
 
 trap 'term_handler' SIGTERM
 
-allowlist_regex="${VINTON_GRAY_CERF_XFF_ALLOWLIST_REGEX:-^(?!)$}"
+allowlist="${VINTON_GRAY_CERF_IP_ALLOWLIST:-}"
+allowlist_conf="/ygag/nginx/conf/vinton-gray-cerf-allowlist.conf"
 
-case "$allowlist_regex" in
-  *'
-'*|*';'*)
-    echo "Invalid VINTON_GRAY_CERF_XFF_ALLOWLIST_REGEX"
-    echo "Invalid VINTON_GRAY_CERF_XFF_ALLOWLIST_REGEX" >> /var/log/nginx/error.log
+: > "$allowlist_conf"
+
+for entry in $(printf '%s' "$allowlist" | tr ',' ' '); do
+  if ! printf '%s\n' "$entry" | grep -Eq '^([0-9]{1,3}\.){3}[0-9]{1,3}(/[0-9]{1,2})?$'; then
+    echo "Invalid VINTON_GRAY_CERF_IP_ALLOWLIST entry: $entry"
+    echo "Invalid VINTON_GRAY_CERF_IP_ALLOWLIST entry: $entry" >> /var/log/nginx/error.log
     exit 1
-    ;;
-esac
+  fi
 
-case "$allowlist_regex" in
-  '^'*'$')
-    ;;
-  *)
-    echo "VINTON_GRAY_CERF_XFF_ALLOWLIST_REGEX must be anchored with ^ and $"
-    echo "VINTON_GRAY_CERF_XFF_ALLOWLIST_REGEX must be anchored with ^ and $" >> /var/log/nginx/error.log
-    exit 1
-    ;;
-esac
+  printf '%s 1;\n' "$entry" >> "$allowlist_conf"
+done
 
-printf '~%s 1;\n' "$allowlist_regex" > /ygag/nginx/conf/vinton-gray-cerf-allowlist.conf
+./sbin/nginx -p /ygag/nginx/ -t >> /var/log/nginx/error.log 2>&1 || exit 1
 
 ./sbin/nginx -p /ygag/nginx/ >> /var/log/nginx/error.log 2>&1 &
 

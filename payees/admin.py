@@ -34,7 +34,7 @@ class PayeeAdmin(admin.ModelAdmin):
     inlines = [Form16Inline]
     list_display = ["hrm_id", "full_name", "tds_type", "status", "user"]
     readonly_fields = ["full_name", "email", "pan_no", "address",
-                       "date_of_joining", "fetch_zoho_button"]
+                       "date_of_joining"]
     ordering = ("status",)
     actions = ['fetch_from_zoho_action']
 
@@ -45,14 +45,6 @@ class PayeeAdmin(admin.ModelAdmin):
             fetch_details.delay(obj.hrm_id)
         except Exception as e:
             logger.error(f"Auto-fetch enqueue failed for {obj.hrm_id}: {e}")
-
-    def fetch_zoho_button(self, obj):
-        if obj.id:
-            return format_html(
-                '<button type="submit" name="_fetch_zoho" class="button" style="background:#B800C4; color:white; border:none; padding:5px 15px; border-radius:4px; cursor:pointer;">Sync with Zoho Now</button>'
-            )
-        return "Save the payee first to enable sync"
-    fetch_zoho_button.short_description = "Zoho Integration"
 
     @admin.action(description="Fetch details from Zoho")
     def fetch_from_zoho_action(self, request, queryset):
@@ -70,16 +62,6 @@ class PayeeAdmin(admin.ModelAdmin):
             self.message_user(request, f"Queued Zoho detail sync for {success_count} payees.")
         if error_count:
             self.message_user(request, f"Failed to queue Zoho detail sync for {error_count} payees.", messages.ERROR)
-
-    def response_change(self, request, obj):
-        if "_fetch_zoho" in request.POST:
-            try:
-                fetch_details.delay(obj.hrm_id)
-                self.message_user(request, "Queued Zoho detail sync.")
-            except Exception as e:
-                self.message_user(request, f"Error queueing Zoho detail sync: {e}", messages.ERROR)
-            return super().response_change(request, obj)
-        return super().response_change(request, obj)
 
     def delete_queryset(self, request, queryset):
         queryset.update(is_deleted=True)

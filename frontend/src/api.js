@@ -3,21 +3,6 @@ export const MEDIA_BASE_URL = import.meta.env.VITE_MEDIA_URL || 'http://localhos
 
 const API_URL = API_BASE_URL;
 
-export const loginUser = async (email, password) => {
-    const response = await fetch(`${API_URL}/login/`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ username: email, password: password })
-    });
-    if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || errorData.detail || 'Login failed');
-    }
-    return response.json();
-};
-
 export const googleLoginUser = async (credential) => {
     const response = await fetch(`${API_URL}/google-login/`, {
         method: 'POST',

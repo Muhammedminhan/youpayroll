@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { API_BASE_URL, MEDIA_BASE_URL, loginUser, googleLoginUser, getProfile } from '../api';
+import { API_BASE_URL, MEDIA_BASE_URL, googleLoginUser, getProfile } from '../api';
 
 const AuthContext = createContext(null);
 
@@ -74,8 +74,7 @@ export const AuthProvider = ({ children }) => {
             if (credential) {
                 authData = await googleLoginUser(credential);
             } else {
-                // Regular login - though not currently used in this flow
-                authData = await loginUser(email, '');
+                throw new Error('Google sign-in is required.');
             }
 
             if (authData.token) {

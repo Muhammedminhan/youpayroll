@@ -3,10 +3,12 @@ import datetime
 from django.test import TestCase, RequestFactory
 from django.contrib.auth.models import User, AnonymousUser
 from rest_framework.authtoken.models import Token
+from rest_framework.test import APIRequestFactory
 from graphql import GraphQLError
 from core.decorators import login_required
 from core.models import (UserNotification, ensure_profile_completion_notification)
 from core.serializers import ProfileSerializer
+from core.views import GoogleLoginView
 from youpayroll.views import DRFTokenAuthGraphQLView
 
 
@@ -98,6 +100,40 @@ class ProfileCompletionNotificationTest(TestCase):
                 notification_type="ACTION_REQUIRED",
             ).exists()
         )
+
+
+class GoogleLoginViewTest(TestCase):
+    def setUp(self):
+        self.factory = APIRequestFactory()
+
+    @patch("core.views.id_token.verify_oauth2_token")
+    def test_rejects_non_ygg_google_accounts(self, mock_verify):
+        mock_verify.return_value = {
+            "email": "external@example.com",
+            "given_name": "External",
+            "family_name": "User",
+        }
+
+        request = self.factory.post("/api/google-login/", {"credential": "token"}, format="json")
+        response = GoogleLoginView.as_view()(request)
+
+        self.assertEqual(response.status_code, 403)
+        self.assertFalse(User.objects.filter(email="external@example.com").exists())
+
+    @patch("core.views.id_token.verify_oauth2_token")
+    def test_created_google_users_have_unusable_passwords(self, mock_verify):
+        mock_verify.return_value = {
+            "email": "Consultant@yougotagift.com",
+            "given_name": "Consultant",
+            "family_name": "User",
+        }
+
+        request = self.factory.post("/api/google-login/", {"credential": "token"}, format="json")
+        response = GoogleLoginView.as_view()(request)
+
+        self.assertEqual(response.status_code, 200)
+        user = User.objects.get(email="consultant@yougotagift.com")
+        self.assertFalse(user.has_usable_password())
 
 
 class ProfilePictureValidationTest(TestCase):

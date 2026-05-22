@@ -134,6 +134,7 @@ class GoogleLoginView(APIView):
                 return Response({'error': 'Email not found in token'}, status=status.HTTP_400_BAD_REQUEST)
 
             from payees.constants import YGG_EMAIL_DOMAIN
+            email = email.lower()
             if not email.endswith(f"@{YGG_EMAIL_DOMAIN}"):
                 return Response(
                     {'error': f'Please use a valid @{YGG_EMAIL_DOMAIN} email address.'}, 
@@ -148,12 +149,14 @@ class GoogleLoginView(APIView):
                 # Ensure unique username
                 if User.objects.filter(username=username).exists():
                     username = f"{username}_{uuid.uuid4().hex[:4]}"
-                user = User.objects.create(
+                user = User(
                     email=email,
                     username=username,
                     first_name=idinfo.get('given_name', ''),
                     last_name=idinfo.get('family_name', '')
                 )
+                user.set_unusable_password()
+                user.save()
 
             token, _ = Token.objects.get_or_create(user=user)
             

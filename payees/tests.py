@@ -50,6 +50,10 @@ class PayeeAdminZohoSyncTest(TestCase):
             "Queued Zoho detail sync for 2 payees.",
         )
 
+    def test_zoho_sync_uses_admin_action_not_change_form_button(self):
+        self.assertIn('fetch_from_zoho_action', self.payee_admin.actions)
+        self.assertNotIn('fetch_zoho_button', self.payee_admin.readonly_fields)
+
 class BankDetailsTest(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(username='testuser')
