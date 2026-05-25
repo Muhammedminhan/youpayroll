@@ -64,9 +64,9 @@ for entry in $(printf '%s' "$allowlist" | tr ',' ' '); do
   printf '%s 1;\n' "$entry" >> "$allowlist_conf"
 done
 
-./sbin/nginx -p /ygag/nginx/ -t >> /var/log/nginx/error.log 2>&1 || exit 1
+/ygag/nginx/sbin/nginx -p /ygag/nginx/ -t >> /var/log/nginx/error.log 2>&1 || exit 1
 
-./sbin/nginx -p /ygag/nginx/ >> /var/log/nginx/error.log 2>&1 &
+/ygag/nginx/sbin/nginx -p /ygag/nginx/ >> /var/log/nginx/error.log 2>&1 &
 
 pid="$!"
 
