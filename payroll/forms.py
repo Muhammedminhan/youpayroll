@@ -47,8 +47,8 @@ class PayRunForm(forms.ModelForm):
                 self.fields['year'].disabled = True
 
             elif latest_payrun.status == PayRunStatusChoices.REJECTED:
-                self.fields['month'].initial = latest_payrun.month
-                self.fields['year'].initial = latest_payrun.year
+                self.fields['month'].initial = next_month
+                self.fields['year'].initial = next_year
                 self.fields['month'].disabled = True
                 self.fields['year'].disabled = True
 

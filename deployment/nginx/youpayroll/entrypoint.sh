@@ -22,8 +22,40 @@ allowlist_conf="/ygag/nginx/conf/vinton-gray-cerf-allowlist.conf"
 
 : > "$allowlist_conf"
 
+is_valid_octet() {
+  case "$1" in
+    ''|*[!0-9]*) return 1 ;;
+  esac
+  [ "$1" -ge 0 ] 2>/dev/null && [ "$1" -le 255 ]
+}
+
+is_valid_allowlist_entry() {
+  entry="$1"
+  ip="${entry%/*}"
+  prefix=""
+
+  if [ "$entry" != "$ip" ]; then
+    prefix="${entry#*/}"
+    case "$prefix" in
+      ''|*[!0-9]*|*/*) return 1 ;;
+    esac
+    [ "$prefix" -ge 0 ] 2>/dev/null && [ "$prefix" -le 32 ] || return 1
+  fi
+
+  old_ifs="$IFS"
+  IFS='.'
+  set -- $ip
+  IFS="$old_ifs"
+
+  [ "$#" -eq 4 ] || return 1
+  is_valid_octet "$1" &&
+    is_valid_octet "$2" &&
+    is_valid_octet "$3" &&
+    is_valid_octet "$4"
+}
+
 for entry in $(printf '%s' "$allowlist" | tr ',' ' '); do
-  if ! printf '%s\n' "$entry" | grep -Eq '^([0-9]{1,3}\.){3}[0-9]{1,3}(/[0-9]{1,2})?$'; then
+  if ! is_valid_allowlist_entry "$entry"; then
     echo "Invalid VINTON_GRAY_CERF_IP_ALLOWLIST entry: $entry"
     echo "Invalid VINTON_GRAY_CERF_IP_ALLOWLIST entry: $entry" >> /var/log/nginx/error.log
     exit 1

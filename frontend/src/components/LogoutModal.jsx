@@ -1,17 +1,43 @@
+import { useEffect, useRef } from 'react';
+
 const LogoutModal = ({ isOpen, onClose, onConfirm }) => {
+    const dialogRef = useRef(null);
+
+    useEffect(() => {
+        if (!isOpen) return undefined;
+
+        dialogRef.current?.focus();
+
+        const handleKeyDown = (event) => {
+            if (event.key === 'Escape') {
+                onClose();
+            }
+        };
+
+        document.addEventListener('keydown', handleKeyDown);
+        return () => document.removeEventListener('keydown', handleKeyDown);
+    }, [isOpen, onClose]);
+
     if (!isOpen) return null;
 
     return (
         <div className="modal-overlay">
-            <div className="modal-content">
+            <div
+                aria-labelledby="logout-modal-title"
+                aria-modal="true"
+                className="modal-content"
+                ref={dialogRef}
+                role="dialog"
+                tabIndex="-1"
+            >
                 <div className="modal-header">
-                    <h2>Logout!</h2>
+                    <h2 id="logout-modal-title">Logout!</h2>
                 </div>
                 <p className="modal-body">Are you sure you want to log out of YOUPayroll?</p>
 
                 <div className="modal-actions">
-                    <button onClick={onClose} className="cancel-btn">Cancel</button>
-                    <button onClick={onConfirm} className="logout-btn">Logout</button>
+                    <button onClick={onClose} className="cancel-btn" type="button">Cancel</button>
+                    <button onClick={onConfirm} className="logout-btn" type="button">Logout</button>
                 </div>
             </div>
 
