@@ -8,13 +8,13 @@ logger = logging.getLogger(__name__)
 @receiver(post_save, sender=BankDetailsAck)
 def update_payee_acknowledgement(sender, instance, created, **kwargs):
     """
-    Mark bank details as acknowledged when an approval is recorded.
+    Keep bank details acknowledgement state in sync with approved attestations.
     """
-    if instance.is_approved:
-        # Use the explicit relation instead of non-deterministic lookup
-        bank_details = instance.bank_details
-        if bank_details:
-            bank_details.payee_acknowledgement = True
-            bank_details.save(update_fields=['payee_acknowledgement'])
-        else:
-            logger.warning(f"Acknowledgement update skipped: No specific bank_details linked to Ack {instance.pk}")
+    bank_details = instance.bank_details
+    if bank_details:
+        bank_details.payee_acknowledgement = bank_details.acknowledgements.filter(
+            is_approved=True,
+        ).exists()
+        bank_details.save(update_fields=['payee_acknowledgement'])
+    else:
+        logger.warning(f"Acknowledgement update skipped: No specific bank_details linked to Ack {instance.pk}")

@@ -1,3 +1,5 @@
+from importlib import import_module
+
 from django.test import TestCase
 from django.contrib.auth.models import User
 from django.contrib import admin, messages
@@ -7,6 +9,10 @@ from django.test import RequestFactory
 from unittest.mock import patch
 from payees.admin import PayeeAdmin
 from payees.models import Payee, BankDetails, BankDetailsAck
+
+choose_bank_details_keeper = import_module(
+    'payees.migrations.0007_bankdetails_unique_payee'
+).choose_bank_details_keeper
 
 
 class PayeeAdminZohoSyncTest(TestCase):
@@ -140,6 +146,7 @@ class BankDetailsTest(TestCase):
                 content=image.read(),
                 content_type='image/png',
             ),
+            is_approved=True,
         )
 
         self.bank_details.ifsc_code = 'NEWIFSC123'
@@ -289,6 +296,54 @@ class BankDetailAPITest(TestCase):
 
         self.assertEqual(response.status_code, 405)
         self.assertTrue(BankDetails.objects.filter(id=bank_details.id).exists())
+
+
+class BankDetailsMigrationTest(TestCase):
+    def test_duplicate_collapse_preserves_acknowledgement_and_merges_fields(self):
+        bank_details = [
+            {
+                'id': 5,
+                'payee_acknowledgement': True,
+                'bank_name': 'Audited Bank',
+                'account_no': None,
+                'account_holder_name': 'Audited Holder',
+                'account_type': None,
+                'ifsc_code': 'AUDITIFSC',
+                'micr_code': None,
+                'swift_code': None,
+                'branch_address': None,
+            },
+            {
+                'id': 10,
+                'payee_acknowledgement': False,
+                'bank_name': None,
+                'account_no': '9876543210',
+                'account_holder_name': None,
+                'account_type': 'Savings',
+                'ifsc_code': None,
+                'micr_code': 'MICR001',
+                'swift_code': 'SWIFT001',
+                'branch_address': 'Merged Branch',
+            },
+        ]
+        acknowledgements = [
+            {'id': 100, 'bank_details_id': 5, 'is_approved': True},
+            {'id': 101, 'bank_details_id': 10, 'is_approved': False},
+        ]
+
+        keeper_id, keeper_ack_id, ack_ids_to_delete, merged_values = choose_bank_details_keeper(
+            bank_details,
+            acknowledgements,
+        )
+
+        self.assertEqual(keeper_id, 5)
+        self.assertEqual(keeper_ack_id, 100)
+        self.assertEqual(ack_ids_to_delete, [101])
+        self.assertTrue(merged_values['payee_acknowledgement'])
+        self.assertEqual(merged_values['bank_name'], 'Audited Bank')
+        self.assertEqual(merged_values['account_no'], '9876543210')
+        self.assertEqual(merged_values['ifsc_code'], 'AUDITIFSC')
+        self.assertEqual(merged_values['branch_address'], 'Merged Branch')
 
 
 class BankDetailAcknowledgementAPITest(TestCase):
@@ -448,6 +503,12 @@ class BankDetailAcknowledgementAPITest(TestCase):
         
         self.bank_details.refresh_from_db()
         self.assertTrue(self.bank_details.payee_acknowledgement)
+
+        ack.is_approved = False
+        ack.save()
+
+        self.bank_details.refresh_from_db()
+        self.assertFalse(self.bank_details.payee_acknowledgement)
 
 
 class BankDetailsAckGraphQLTest(TestCase):
