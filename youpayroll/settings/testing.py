@@ -1,6 +1,9 @@
 import os
 from cryptography.fernet import Fernet
 
+# Generate a non-secret key for each test process so tests do not depend on a
+# committed fallback. This is stable within one process, but encrypted fixtures
+# that need to survive across test runs should set FIELD_ENCRYPTION_KEY instead.
 os.environ.setdefault('FIELD_ENCRYPTION_KEY', Fernet.generate_key().decode())
 
 from .base import *
