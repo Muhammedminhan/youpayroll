@@ -35,6 +35,6 @@ class Migration(migrations.Migration):
         migrations.RunPython(remove_duplicate_bank_detail_acknowledgements, migrations.RunPython.noop),
         migrations.AddConstraint(
             model_name='bankdetailsack',
-            constraint=models.UniqueConstraint(condition=models.Q(('bank_details__isnull', False)), fields=('bank_details',), name='unique_ack_per_bank_details'),
+            constraint=models.UniqueConstraint(condition=models.Q(bank_details__isnull=False), fields=('bank_details',), name='unique_ack_per_bank_details'),
         ),
     ]
