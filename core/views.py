@@ -4,10 +4,24 @@ from rest_framework.views import APIView
 from django.conf import settings
 from google.oauth2 import id_token
 from google.auth.transport import requests as google_requests
+import base64
+import json
 import logging
 import uuid
 
 logger = logging.getLogger(__name__)
+
+
+def _safe_google_token_claims(credential):
+    """Return non-sensitive token claims for diagnostics without verifying."""
+    try:
+        _header, payload, *_rest = credential.split('.')
+        padding = '=' * (-len(payload) % 4)
+        return json.loads(base64.urlsafe_b64decode(f'{payload}{padding}'))
+    except (ValueError, json.JSONDecodeError, TypeError):
+        return {}
+
+
 from django.contrib.auth.models import User
 from rest_framework.authtoken.models import Token
 from django.shortcuts import get_object_or_404
@@ -126,7 +140,8 @@ class GoogleLoginView(APIView):
             idinfo = id_token.verify_oauth2_token(
                 credential, 
                 google_requests.Request(), 
-                settings.GOOGLE_CLIENT_ID
+                settings.GOOGLE_CLIENT_ID,
+                clock_skew_in_seconds=settings.GOOGLE_ID_TOKEN_CLOCK_SKEW_SECONDS,
             )
             
             email = idinfo.get('email')
@@ -170,8 +185,17 @@ class GoogleLoginView(APIView):
             data['token'] = token.key
             return Response(data)
 
-        except ValueError:
+        except ValueError as exc:
             # Invalid token
+            claims = _safe_google_token_claims(credential)
+            logger.warning(
+                "Google login token verification failed: %s; aud=%s iss=%s exp=%s configured_aud=%s",
+                exc,
+                claims.get('aud'),
+                claims.get('iss'),
+                claims.get('exp'),
+                settings.GOOGLE_CLIENT_ID,
+            )
             return Response({'error': 'Invalid authentication token.'}, status=status.HTTP_401_UNAUTHORIZED)
         except Exception as e:
             logger.error(f"Google login failed: {str(e)}")

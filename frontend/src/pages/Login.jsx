@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { GoogleLogin } from '@react-oauth/google';
@@ -11,12 +11,20 @@ const Login = () => {
   const { login, isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const [loginError, setLoginError] = useState(location.state?.error || '');
 
   useEffect(() => {
     if (isAuthenticated) {
       navigate('/', { replace: true });
     }
   }, [isAuthenticated, navigate]);
+
+  useEffect(() => {
+    if (location.state?.error) {
+      setLoginError(location.state.error);
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, [location.pathname, location.state?.error, navigate]);
 
   const handleGoogleSuccess = async (credentialResponse) => {
     try {
@@ -55,9 +63,9 @@ const Login = () => {
           <p className="subtitle">Please sign in with your Google account to continue</p>
         </div>
 
-        {location.state?.error && (
+        {loginError && (
           <div className="error-message-box" style={{ color: '#ef4444', backgroundColor: '#fee2e2', padding: '1rem', borderRadius: '12px', marginBottom: '1.5rem', fontSize: '0.9rem', fontWeight: '600' }}>
-            {location.state.error}
+            {loginError}
           </div>
         )}
 

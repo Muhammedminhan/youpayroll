@@ -1,4 +1,4 @@
-from unittest.mock import patch
+from unittest.mock import ANY, patch
 import datetime
 from django.conf import settings
 from django.core.cache import cache
@@ -156,6 +156,12 @@ class GoogleLoginViewTest(TestCase):
         response = GoogleLoginView.as_view()(request)
 
         self.assertEqual(response.status_code, 200)
+        mock_verify.assert_called_once_with(
+            "token",
+            ANY,
+            settings.GOOGLE_CLIENT_ID,
+            clock_skew_in_seconds=settings.GOOGLE_ID_TOKEN_CLOCK_SKEW_SECONDS,
+        )
         user = User.objects.get(email="consultant@yougotagift.com")
         self.assertFalse(user.has_usable_password())
 

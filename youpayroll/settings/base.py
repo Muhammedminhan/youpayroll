@@ -271,6 +271,11 @@ LOGOUT_REDIRECT_URL = '/vinton-gray-cerf/'
 
 
 GOOGLE_CLIENT_ID = config('GOOGLE_CLIENT_ID', default='')
+GOOGLE_ID_TOKEN_CLOCK_SKEW_SECONDS = config(
+    'GOOGLE_ID_TOKEN_CLOCK_SKEW_SECONDS',
+    default=10,
+    cast=int,
+)
 
 
 CORS_ALLOW_ALL_ORIGINS = config('CORS_ALLOW_ALL_ORIGINS', default=False, cast=bool)
