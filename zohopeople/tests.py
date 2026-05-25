@@ -1,9 +1,37 @@
 from unittest.mock import patch, MagicMock
+from django.contrib import admin
+from django.contrib.auth.models import AnonymousUser, User
+from django.test import RequestFactory, TestCase
 from django.utils import timezone
 from datetime import timedelta
+from zohopeople.admin import ZohoPeopleFormTokenAdmin
 from zohopeople.utils import generate_access_token, get_payees_details
 from zohopeople.models import ZohoPeopleFormToken
-from django.test import TestCase
+
+
+class ZohoPeopleFormTokenAdminTest(TestCase):
+    def setUp(self):
+        self.factory = RequestFactory()
+        self.admin = ZohoPeopleFormTokenAdmin(ZohoPeopleFormToken, admin.site)
+
+    def test_module_permission_is_superuser_only(self):
+        superuser = User.objects.create_superuser(
+            username='zoho_admin',
+            email='zoho_admin@example.com',
+            password='password',
+        )
+        staff_user = User.objects.create_user(username='zoho_staff', is_staff=True)
+
+        request = self.factory.get('/admin/zohopeople/')
+        request.user = superuser
+        self.assertTrue(self.admin.has_module_permission(request))
+
+        request.user = staff_user
+        self.assertFalse(self.admin.has_module_permission(request))
+
+        request.user = AnonymousUser()
+        self.assertFalse(self.admin.has_module_permission(request))
+
 
 class ZohoUtilsTest(TestCase):
     def setUp(self):

@@ -5,6 +5,11 @@ from .base import *
 # Enforce production mode
 DEBUG = False
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+STATIC_URL = 'https://%s/%s/' % (AWS_S3_CUSTOM_DOMAIN, AWS_LOCATION)
+STATICFILES_STORAGE = 'payees.storage_backends.StaticStorage'
+DEFAULT_FILE_STORAGE = 'payees.storage_backends.MediaStorage'
+MEDIA_URL = f"https://{AWS_S3_CUSTOM_DOMAIN}/{MEDIAFILES_LOCATION}/"
+CELERY_TASK_ALWAYS_EAGER = False
 
 # Django SECRET_KEY (REQUIRED in production, must be strong)
 SECRET_KEY = config('SECRET_KEY', default=None)
