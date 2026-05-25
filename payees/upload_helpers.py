@@ -11,8 +11,8 @@ logger = logging.getLogger(__name__)
 def validate_image(file):
     try:
         try:
-            img = Image.open(file)
-            img.verify()
+            with Image.open(file) as img:
+                img.verify()
         except (IOError, SyntaxError, UnidentifiedImageError) as e:
             logger.warning(f"Image validation failed: {e}", exc_info=True)
             raise ValidationError("The uploaded file is not a valid image.")

@@ -6,6 +6,7 @@ from django.db.models import Count
 
 def collapse_duplicate_bank_details(apps, schema_editor):
     BankDetails = apps.get_model('payees', 'BankDetails')
+    BankDetailsAck = apps.get_model('payees', 'BankDetailsAck')
 
     duplicate_payee_ids = (
         BankDetails.objects
@@ -16,13 +17,56 @@ def collapse_duplicate_bank_details(apps, schema_editor):
     )
 
     for payee_id in duplicate_payee_ids:
-        bank_detail_ids = list(
+        bank_details = list(
             BankDetails.objects
             .filter(payee_id=payee_id)
-            .order_by('-id')
-            .values_list('id', flat=True)
+            .values('id', 'payee_acknowledgement')
         )
-        BankDetails.objects.filter(id__in=bank_detail_ids[1:]).delete()
+        bank_detail_ids = [bank_detail['id'] for bank_detail in bank_details]
+        acknowledgements = list(
+            BankDetailsAck.objects
+            .filter(bank_details_id__in=bank_detail_ids)
+            .order_by('-is_approved', '-uploaded_date', '-id')
+            .values('id', 'bank_details_id', 'is_approved')
+        )
+
+        if acknowledgements:
+            # Preserve the strongest attestation before deleting duplicate bank rows.
+            # The final schema allows one acknowledgement per bank-details row, so
+            # approved and newer acknowledgements win when duplicates already exist.
+            keeper_ack = acknowledgements[0]
+            keeper_id = keeper_ack['bank_details_id']
+            BankDetailsAck.objects.filter(
+                id__in=[ack['id'] for ack in acknowledgements[1:]]
+            ).delete()
+            BankDetailsAck.objects.filter(id=keeper_ack['id']).update(
+                bank_details_id=keeper_id,
+            )
+            payee_acknowledgement = keeper_ack['is_approved']
+        else:
+            acknowledged_by_bank_detail_id = {
+                bank_detail['id']: bank_detail['payee_acknowledgement']
+                for bank_detail in bank_details
+            }
+            keeper_id = max(
+                bank_detail_ids,
+                key=lambda bank_detail_id: (
+                    acknowledged_by_bank_detail_id[bank_detail_id],
+                    bank_detail_id,
+                ),
+            )
+            payee_acknowledgement = any(acknowledged_by_bank_detail_id.values())
+
+        BankDetails.objects.filter(id=keeper_id).update(
+            payee_acknowledgement=payee_acknowledgement,
+        )
+        BankDetails.objects.filter(
+            id__in=[
+                bank_detail_id
+                for bank_detail_id in bank_detail_ids
+                if bank_detail_id != keeper_id
+            ],
+        ).delete()
 
 
 class Migration(migrations.Migration):
