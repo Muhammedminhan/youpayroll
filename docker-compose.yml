@@ -27,7 +27,7 @@ services:
       - redis
     environment:
       DJANGO_SETTINGS_MODULE: ${DJANGO_SETTINGS_MODULE:-youpayroll.settings.development}
-      SECRET_KEY: ${SECRET_KEY}
+      SECRET_KEY: ${SECRET_KEY:-django-insecure-default-key-for-dev-and-test}
       FIELD_ENCRYPTION_KEY: ${FIELD_ENCRYPTION_KEY:?FIELD_ENCRYPTION_KEY must be set}
       DEBUG: ${DEBUG:-True}
       RUN_MIGRATIONS: "true"
@@ -59,7 +59,7 @@ services:
       - redis
     environment:
       DJANGO_SETTINGS_MODULE: ${DJANGO_SETTINGS_MODULE:-youpayroll.settings.development}
-      SECRET_KEY: ${SECRET_KEY}
+      SECRET_KEY: ${SECRET_KEY:-django-insecure-default-key-for-dev-and-test}
       FIELD_ENCRYPTION_KEY: ${FIELD_ENCRYPTION_KEY:?FIELD_ENCRYPTION_KEY must be set}
       DEBUG: ${DEBUG:-True}
       DATABASE_ENGINE: ${DATABASE_ENGINE:-django.db.backends.postgresql}
