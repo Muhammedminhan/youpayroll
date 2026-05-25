@@ -2,18 +2,18 @@ from rest_framework import serializers
 from .models import PayRun, Payment, PayRecordRegister, Form16, Form16Entry
 
 class Form16EntrySerializer(serializers.ModelSerializer):
-    form16_id = serializers.PrimaryKeyRelatedField(
+    form16_pk = serializers.PrimaryKeyRelatedField(
         source='financial_year',
         read_only=True,
     )
-    financial_year = serializers.CharField(
+    form16_financial_year = serializers.CharField(
         source='financial_year.financial_year',
         read_only=True,
     )
 
     class Meta:
         model = Form16Entry
-        fields = ['id', 'form16_id', 'financial_year', 'form_16']
+        fields = ['id', 'form16_pk', 'form16_financial_year', 'form_16']
 
 class Form16Serializer(serializers.ModelSerializer):
     entries = Form16EntrySerializer(many=True, read_only=True)

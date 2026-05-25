@@ -247,6 +247,35 @@ class ProfilePictureValidationTest(TestCase):
         self.assertIn('profile_picture', serializer.errors)
 
 
+class HealthCheckTest(TestCase):
+    def test_liveness_check_has_no_database_dependency(self):
+        with patch("youpayroll.views.connection.cursor", side_effect=Exception("db down")):
+            response = self.client.get("/health/live/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.content, b"OK")
+
+    def test_legacy_health_check_has_no_database_dependency(self):
+        with patch("youpayroll.views.connection.cursor", side_effect=Exception("db down")):
+            response = self.client.get("/health/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.content, b"OK")
+
+    def test_readiness_check_returns_ok_when_database_is_available(self):
+        response = self.client.get("/health/ready/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.content, b"OK")
+
+    def test_readiness_check_returns_503_when_database_is_unavailable(self):
+        with patch("youpayroll.views.connection.cursor", side_effect=Exception("db down")):
+            response = self.client.get("/health/ready/")
+
+        self.assertEqual(response.status_code, 503)
+        self.assertEqual(response.content, b"Service Unavailable")
+
+
 class DRFTokenAuthGraphQLViewTest(TestCase):
     def setUp(self):
         self.factory = RequestFactory()
@@ -270,6 +299,7 @@ class DRFTokenAuthGraphQLViewTest(TestCase):
         view = DRFTokenAuthGraphQLView()
         response = view.dispatch(req)
         self.assertEqual(response.status_code, 401)
+        self.assertIn("Invalid authentication credentials", response.content.decode())
 
     def test_token_auth_succeeds(self):
         # A request with a valid DRF Token header should be authenticated correctly

@@ -42,7 +42,7 @@ if [ -z "$DJANGO_SETTINGS_MODULE" ]; then
     exit 1
 fi
 
-# Run migrations if explicitly enabled or if running in development context
+# Run migrations only when explicitly enabled.
 if [ "$RUN_MIGRATIONS" = "true" ]; then
     echo "Running migrations..."
     python manage.py migrate --noinput
@@ -50,7 +50,7 @@ else
     echo "Skipping database migrations (RUN_MIGRATIONS != true)."
 fi
 
-# Collect static files if explicitly enabled or if running in development context
+# Collect static files only when explicitly enabled.
 if [ "$RUN_COLLECTSTATIC" = "true" ]; then
     echo "Collecting static files..."
     python manage.py collectstatic --noinput
@@ -60,4 +60,3 @@ fi
 
 # Execute the command passed as arguments to the entrypoint script
 exec "$@"
-

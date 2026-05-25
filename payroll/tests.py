@@ -3,10 +3,12 @@ import zipfile
 from unittest import mock
 
 from django.core.exceptions import ValidationError
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 
 from .forms import PayRunForm
-from .models import PayRun, PayRunStatusChoices
+from .models import Form16, Form16Entry, PayRun, PayRunStatusChoices
+from .serializers import Form16EntrySerializer
 from .tasks import extract_form16_zip_task
 from .upload_helpers import validate_zip_file
 from .utils import get_latest_payrun
@@ -53,6 +55,25 @@ def _make_zip_with_info(info, data, compress_type=zipfile.ZIP_STORED):
 # ---------------------------------------------------------------------------
 # PayRunForm tests (pre-existing)
 # ---------------------------------------------------------------------------
+
+class Form16EntrySerializerTest(TestCase):
+    def test_form16_entry_uses_unambiguous_related_form16_fields(self):
+        form16 = Form16.objects.create(
+            financial_year='2025-26',
+            form16_zip_file=SimpleUploadedFile('form16.zip', b'PK\x05\x06' + b'\x00' * 18),
+        )
+        entry = Form16Entry.objects.create(
+            financial_year=form16,
+            form_16=SimpleUploadedFile('form16.pdf', b'%PDF-1.4'),
+        )
+
+        data = Form16EntrySerializer(entry).data
+
+        self.assertEqual(data['form16_pk'], form16.pk)
+        self.assertEqual(data['form16_financial_year'], '2025-26')
+        self.assertNotIn('form16_id', data)
+        self.assertNotIn('financial_year', data)
+
 
 class PayRunFormTest(TestCase):
     def test_latest_payrun_uses_period_before_created_at(self):

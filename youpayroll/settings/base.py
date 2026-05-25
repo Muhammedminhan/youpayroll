@@ -49,7 +49,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'payees.apps.PayeesConfig',
-    'zohopeople.apps.ZohopeopleConfig',
+    'zohopeople.apps.ZohoPeopleConfig',
     'auditlog',
     'django_celery_results',
     'storages',
