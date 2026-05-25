@@ -44,7 +44,7 @@ def validate_zip_file(file):
                     or '..' in norm_path.split('/')
                     or '\\' in info.filename
                 ):
-                    logger.warning("Zip-Slip attempt detected: %r", info.filename)
+                    logger.warning("Zip-Slip attempt detected in ZIP member path")
                     raise ValidationError("ZIP archive contains invalid file paths (traversal attempt).")
                 
                 # 4. Zip-Bomb Defense: limit individual size and compression ratio
@@ -64,7 +64,7 @@ def validate_zip_file(file):
 
     except ValidationError:
         raise
-    except Exception as e:
+    except Exception:
         # Log the internal details before raising a generic error to the user
         logger.exception("ZIP validation internal error")
         raise ValidationError("An error occurred while validating the ZIP file.")

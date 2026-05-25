@@ -13,7 +13,7 @@ job:
     - name: 'collectstatic'
       imagePullPolicy: 'Always'
       image: '459037613883.dkr.ecr.ap-south-1.amazonaws.com/production/ygag/youpayroll-aps/backend-app:[BUILD_TAG]'
-      command: '["sh", "-c", ". /vault/secrets/application.env ; . /vault/secrets/application-devops.env ;python3.11 manage.py collectstatic --no-input >> /ygag/logs/app.out.collectstatic.log 2>&1"]'
+      command: '["sh", "-c", ". /vault/secrets/application.env ; . /vault/secrets/application-devops.env ; python3.11 manage.py collectstatic --noinput >> /ygag/logs/app.out.collectstatic.log 2>&1"]'
       env:
         - name: 'DJANGO_SETTINGS_MODULE'
           value: 'youpayroll.settings.sandbox'

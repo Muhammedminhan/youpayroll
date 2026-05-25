@@ -40,13 +40,10 @@ class PayRunForm(forms.ModelForm):
                 next_month = 1
                 next_year += 1
 
-            if latest_payrun.status == PayRunStatusChoices.APPROVED:
-                self.fields['month'].initial = next_month
-                self.fields['year'].initial = next_year
-                self.fields['month'].disabled = True
-                self.fields['year'].disabled = True
-
-            elif latest_payrun.status == PayRunStatusChoices.REJECTED:
+            if latest_payrun.status in {
+                PayRunStatusChoices.APPROVED,
+                PayRunStatusChoices.REJECTED,
+            }:
                 self.fields['month'].initial = next_month
                 self.fields['year'].initial = next_year
                 self.fields['month'].disabled = True
