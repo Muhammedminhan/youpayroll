@@ -6,7 +6,7 @@ class StaticStorage(S3Boto3Storage):
     """
     Custom storage backend to handle static files with S3.
     """
-    location = settings.STATICFILES_LOCATION
+    location = settings.AWS_LOCATION
     custom_domain = settings.AWS_S3_CUSTOM_DOMAIN
 
 

@@ -69,8 +69,9 @@ class Form16EntrySerializerTest(TestCase):
 
         data = Form16EntrySerializer(entry).data
 
-        self.assertEqual(data['form16_pk'], form16.pk)
+        self.assertEqual(data['financial_year_id'], form16.pk)
         self.assertEqual(data['form16_financial_year'], '2025-26')
+        self.assertNotIn('form16_pk', data)
         self.assertNotIn('form16_id', data)
         self.assertNotIn('financial_year', data)
 
