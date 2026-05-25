@@ -11,5 +11,9 @@ ADD requirements.txt /ygag/requirements.txt
 # Install build dependencies directly from apk repositories, install python requirements, and clean up build dependencies
 RUN apk update && \
     apk add --no-cache --virtual .build-deps gcc musl-dev postgresql-dev libjpeg-turbo-dev zlib-dev libffi-dev && \
-    pip3.11 install --extra-index-url=$YGAG_PIP_PRIVATE_REPO_URL --no-cache-dir -r requirements.txt && \
+    if [ -n "$YGAG_PIP_PRIVATE_REPO_URL" ]; then \
+        pip3.11 install --extra-index-url="$YGAG_PIP_PRIVATE_REPO_URL" --no-cache-dir -r requirements.txt; \
+    else \
+        pip3.11 install --no-cache-dir -r requirements.txt; \
+    fi && \
     apk del .build-deps
