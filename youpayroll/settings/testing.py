@@ -14,6 +14,13 @@ SECURE_SSL_REDIRECT = False
 SESSION_COOKIE_SECURE = False
 CSRF_COOKIE_SECURE = False
 
+# Keep tests independent of S3 settings even though base.py computes storage
+# backends before this module overrides DEBUG.
+STATIC_URL = '/static/'
+STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.StaticFilesStorage'
+DEFAULT_FILE_STORAGE = 'django.core.files.storage.FileSystemStorage'
+MEDIA_URL = '/media/'
+
 # Blazing-fast in-memory SQLite database configuration for isolated test environments
 DATABASES = {
     'default': {
