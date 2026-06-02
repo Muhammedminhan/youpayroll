@@ -1,5 +1,6 @@
 # WARNING: This is a template configuration file for background consumers.
 # Replace all instances of 'consumer-name' with the actual consumer name (e.g. 'zoho-sync-worker') during deployment.
+# Replace [MANAGEMENT_COMMAND] with an existing Django management command for the consumer.
 namespace: 'youpayroll'
 
 app_name: 'youpayroll'
@@ -35,7 +36,7 @@ deployment:
       name: 'consumer-name'
       imagePullPolicy: 'Always'
       image: '459037613883.dkr.ecr.me-central-1.amazonaws.com/production/ygg/youpayroll/backend-app:[BUILD_TAG]'
-      command: '["sh", "-c", ". /vault/secrets/application.env ; . /vault/secrets/application-devops.env ; python3.11 manage.py consumer >> /ygag/logs/app.out.consumer-name.log 2>&1"]'
+      command: '["sh", "-c", ". /vault/secrets/application.env ; . /vault/secrets/application-devops.env ; python3.11 manage.py [MANAGEMENT_COMMAND] >> /ygag/logs/app.out.consumer-name.log 2>&1"]'
       env:
         - name: 'DJANGO_SETTINGS_MODULE'
           value: 'youpayroll.settings.sandbox'
