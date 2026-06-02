@@ -1,5 +1,6 @@
 from decouple import config
 from .base import *
+from .utils import require_aws_s3_settings
 
 DEBUG = config('DEBUG', cast=bool, default=True)
 SECURE_PROXY_SSL_HEADER = None if DEBUG else ('HTTP_X_FORWARDED_PROTO', 'https')
@@ -17,6 +18,11 @@ if DEBUG:
     MEDIA_URL = '/media/'
     CELERY_TASK_ALWAYS_EAGER = True
 else:
+    aws_settings = require_aws_s3_settings('development')
+    AWS_STORAGE_BUCKET_NAME = aws_settings['AWS_STORAGE_BUCKET_NAME']
+    AWS_S3_REGION_NAME = aws_settings['AWS_S3_REGION_NAME']
+    AWS_LOCATION = aws_settings['AWS_LOCATION']
+    AWS_S3_CUSTOM_DOMAIN = f'{AWS_STORAGE_BUCKET_NAME}.s3.{AWS_S3_REGION_NAME}.amazonaws.com'
     STATIC_URL = 'https://%s/%s/' % (AWS_S3_CUSTOM_DOMAIN, AWS_LOCATION)
     STATICFILES_STORAGE = 'payees.storage_backends.StaticStorage'
     DEFAULT_FILE_STORAGE = 'payees.storage_backends.MediaStorage'

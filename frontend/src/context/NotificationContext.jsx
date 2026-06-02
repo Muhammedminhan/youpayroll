@@ -76,10 +76,7 @@ export const NotificationProvider = ({ children }) => {
             await markNotificationAsRead(token, notifId);
         } catch (err) {
             console.error('Failed to mark notification as read:', err);
-            // Revert only the single notification's is_read flag on network failure
-            setNotifications(prev => prev.map(n =>
-                n.id === notifId ? { ...n, is_read: false } : n
-            ));
+            await fetchNotifications();
         }
     };
 
