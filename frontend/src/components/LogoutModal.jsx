@@ -23,6 +23,7 @@ const LogoutModal = ({ isOpen, onClose, onConfirm }) => {
     return (
         <div className="modal-overlay">
             <div
+                aria-describedby="logout-modal-description"
                 aria-labelledby="logout-modal-title"
                 aria-modal="true"
                 className="modal-content"
@@ -33,7 +34,9 @@ const LogoutModal = ({ isOpen, onClose, onConfirm }) => {
                 <div className="modal-header">
                     <h2 id="logout-modal-title">Logout!</h2>
                 </div>
-                <p className="modal-body">Are you sure you want to log out of YOUPayroll?</p>
+                <p className="modal-body" id="logout-modal-description">
+                    Are you sure you want to log out of YOUPayroll?
+                </p>
 
                 <div className="modal-actions">
                     <button onClick={onClose} className="cancel-btn" type="button">Cancel</button>

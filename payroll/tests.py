@@ -76,6 +76,28 @@ class Form16EntrySerializerTest(TestCase):
         self.assertNotIn('financial_year', data)
 
 
+class Form16SignalTest(TestCase):
+    def test_logs_only_when_extraction_task_is_dispatched_on_commit(self):
+        with mock.patch('payroll.tasks.extract_form16_zip_task.delay') as mock_delay, \
+                mock.patch('payroll.signals.logger.info') as mock_info:
+            with self.captureOnCommitCallbacks(execute=False) as callbacks:
+                form16 = Form16.objects.create(
+                    financial_year='2025-26',
+                    form16_zip_file=SimpleUploadedFile('form16.zip', b'PK\x05\x06' + b'\x00' * 18),
+                )
+
+            self.assertEqual(len(callbacks), 1)
+            mock_delay.assert_not_called()
+            mock_info.assert_not_called()
+
+            callbacks[0]()
+
+            mock_delay.assert_called_once_with(form16.pk)
+            mock_info.assert_called_once_with(
+                f"Dispatched Form16 extraction task for ID {form16.pk}"
+            )
+
+
 class PayRunFormTest(TestCase):
     def test_latest_payrun_uses_period_before_created_at(self):
         older_period_created_later = PayRun.objects.create(

@@ -18,5 +18,9 @@ def extract_zip_and_create_entries(sender, instance, created, **kwargs):
         return
         
     from payroll.tasks import extract_form16_zip_task
-    transaction.on_commit(lambda: extract_form16_zip_task.delay(instance.pk))
-    logger.info(f"Dispatched Form16 extraction task for ID {instance.pk}")
+
+    def dispatch_extraction_task():
+        extract_form16_zip_task.delay(instance.pk)
+        logger.info(f"Dispatched Form16 extraction task for ID {instance.pk}")
+
+    transaction.on_commit(dispatch_extraction_task)
