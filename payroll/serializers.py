@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from payees.utils_masking import mask_if_present, mask_last_four
 from .models import PayRun, Payment, PayRecordRegister, Form16, Form16Entry
 
 class Form16EntrySerializer(serializers.ModelSerializer):
@@ -55,25 +56,16 @@ class PayRecordRegisterSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
     def get_account_number(self, obj):
-        acc = obj.account_number
-        if not acc:
-            return ""
-        if len(acc) <= 4:
-            return "****"
-        return f"****{acc[-4:]}"
+        return mask_last_four(obj.account_number)
 
     def get_ifsc_code(self, obj):
-        ifsc = obj.ifsc_code or ""
-        return "****" if ifsc else ""
+        return mask_if_present(obj.ifsc_code)
 
     def get_micr_code(self, obj):
-        micr = obj.micr_code or ""
-        return "****" if micr else ""
+        return mask_if_present(obj.micr_code)
 
     def get_swift_code(self, obj):
-        swift = obj.swift_code or ""
-        return "****" if swift else ""
+        return mask_if_present(obj.swift_code)
 
     def get_branch_address(self, obj):
-        addr = obj.branch_address or ""
-        return "****" if addr else ""
+        return mask_if_present(obj.branch_address)

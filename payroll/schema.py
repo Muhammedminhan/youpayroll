@@ -1,6 +1,7 @@
 import graphene
 from graphene_django.types import DjangoObjectType
 from core.decorators import login_required
+from payees.utils_masking import mask_if_present, mask_last_four
 from .models import Payment, PayRecordRegister
 
 
@@ -17,28 +18,19 @@ class PayRecordRegisterType(DjangoObjectType):
                   'tds_percentage', 'gross_amount')
 
     def resolve_account_number(self, info):
-        acc = self.account_number
-        if not acc:
-            return ""
-        if len(acc) <= 4:
-            return "****"
-        return f"****{acc[-4:]}"
+        return mask_last_four(self.account_number)
 
     def resolve_ifsc_code(self, info):
-        ifsc = self.ifsc_code or ""
-        return "****" if ifsc else ""
+        return mask_if_present(self.ifsc_code)
 
     def resolve_micr_code(self, info):
-        micr = self.micr_code or ""
-        return "****" if micr else ""
+        return mask_if_present(self.micr_code)
 
     def resolve_swift_code(self, info):
-        swift = self.swift_code or ""
-        return "****" if swift else ""
+        return mask_if_present(self.swift_code)
 
     def resolve_branch_address(self, info):
-        addr = self.branch_address or ""
-        return "****" if addr else ""
+        return mask_if_present(self.branch_address)
 
 
 class PaymentType(DjangoObjectType):
