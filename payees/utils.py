@@ -1,4 +1,3 @@
-from .models import Payee
 from .constants import RESTRICTED_PAYEE_GROUPS
 from django.contrib.auth import get_user_model
 from django.core.exceptions import FieldError, FieldDoesNotExist
@@ -12,10 +11,7 @@ def restrict_queryset_by_group(qs, user, payee_field=None):
             return qs.filter(id=user.id)
         # Otherwise, restrict to related Payee or user field
         if payee_field:
-            payee = Payee.objects.filter(user=user).first()
-            if not payee:
-                return qs.none()
-            return qs.filter(**{payee_field: payee})
+            return qs.filter(**{f'{payee_field}__user': user})
             
         # Fallback to user field check
         # Validate that the model has a user field to fail-fast cleanly

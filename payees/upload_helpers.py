@@ -23,8 +23,11 @@ def validate_image(file):
 
 def user_directory_path(instance, filename):
     # File will be uploaded to MEDIA_ROOT/uploads/payees/bank-acknowledgement/user_<hrm_id>/<filename>
+    filename = os.path.basename(str(filename).replace('\\', '/'))
     base_filename, file_extension = os.path.splitext(filename)
-    safe_base = get_valid_filename(base_filename)
+    safe_base = get_valid_filename(base_filename).strip('._')
+    if not safe_base:
+        safe_base = 'upload'
     safe_hrm_id = get_valid_filename(str(instance.payee.hrm_id or '')).strip('._')
     if not safe_hrm_id:
         safe_hrm_id = str(instance.payee_id or 'unknown')

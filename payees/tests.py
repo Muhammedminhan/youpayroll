@@ -2,6 +2,7 @@ from importlib import import_module
 
 from django.test import TestCase
 from django.contrib.auth.models import User
+from django.contrib.auth.models import Group
 from django.contrib import admin, messages
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
@@ -9,6 +10,7 @@ from django.test import RequestFactory
 from unittest.mock import patch
 from payees.admin import PayeeAdmin
 from payees.models import Payee, BankDetails, BankDetailsAck
+from payees.utils import restrict_queryset_by_group
 
 choose_bank_details_keeper = import_module(
     'payees.migrations.0007_bankdetails_unique_payee'
@@ -212,6 +214,26 @@ class BankDetailsTest(TestCase):
         self.payee.refresh_from_db()
         self.assertEqual(self.user.email, 'old@example.com')
         self.assertEqual(self.payee.email, 'old@example.com')
+
+
+class RestrictQuerysetByGroupTest(TestCase):
+    def test_filters_payee_relation_without_fetching_payee_first(self):
+        group = Group.objects.create(name='PAYEE')
+        user = User.objects.create_user(username='restricted_user')
+        user.groups.add(group)
+        payee = Payee.objects.create(user=user, hrm_id='HRRQ1')
+        bank_details = BankDetails.objects.create(payee=payee, bank_name='Visible Bank')
+
+        with self.assertNumQueries(2):
+            result = list(
+                restrict_queryset_by_group(
+                    BankDetails.objects.order_by('id'),
+                    user,
+                    payee_field='payee',
+                )
+            )
+
+        self.assertEqual(result, [bank_details])
 
 
 from rest_framework.test import APIClient
@@ -701,3 +723,17 @@ class UserDirectoryPathTest(TestCase):
 
         self.assertTrue(path.startswith('uploads/payees/bank-acknowledgement/user_HR123/'))
         self.assertNotIn('..', path)
+
+    def test_uses_safe_basename_for_uploaded_filename(self):
+        from payees.upload_helpers import user_directory_path
+
+        user = User.objects.create_user(username='unsafe_filename_user')
+        payee = Payee.objects.create(user=user, hrm_id='HRFILE')
+        ack = BankDetailsAck(payee=payee)
+
+        path = user_directory_path(ack, '../../.hidden.png')
+
+        self.assertTrue(path.startswith('uploads/payees/bank-acknowledgement/user_HRFILE/'))
+        self.assertNotIn('..', path)
+        self.assertNotIn('/.', path)
+        self.assertIn('/hidden_', path)
