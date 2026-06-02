@@ -25,7 +25,10 @@ def user_directory_path(instance, filename):
     # File will be uploaded to MEDIA_ROOT/uploads/payees/bank-acknowledgement/user_<hrm_id>/<filename>
     base_filename, file_extension = os.path.splitext(filename)
     safe_base = get_valid_filename(base_filename)
+    safe_hrm_id = get_valid_filename(str(instance.payee.hrm_id or '')).strip('._')
+    if not safe_hrm_id:
+        safe_hrm_id = str(instance.payee_id or 'unknown')
     timestamp = timezone.now().strftime('%Y%m%d%H%M%S')
     safe_filename = f"{safe_base}_{timestamp}{file_extension}"
     return f"uploads/payees/bank-acknowledgement/user_" \
-           f"{instance.payee.hrm_id}/{safe_filename}"
+           f"{safe_hrm_id}/{safe_filename}"

@@ -687,3 +687,17 @@ class ValidateImageTest(TestCase):
             validate_image(bad_buffer)
             
         self.assertEqual(str(ctx.exception), "['The uploaded file is not a valid image.']")
+
+
+class UserDirectoryPathTest(TestCase):
+    def test_sanitizes_hrm_id_path_segment(self):
+        from payees.upload_helpers import user_directory_path
+
+        user = User.objects.create_user(username='unsafe_hrm_user')
+        payee = Payee.objects.create(user=user, hrm_id='../HR/123')
+        ack = BankDetailsAck(payee=payee)
+
+        path = user_directory_path(ack, 'bank proof.png')
+
+        self.assertTrue(path.startswith('uploads/payees/bank-acknowledgement/user_HR123/'))
+        self.assertNotIn('..', path)

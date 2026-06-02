@@ -145,9 +145,11 @@ class ValidateZipFileTest(TestCase):
     def test_non_zip_magic_bytes_rejected(self):
         """A file with non-ZIP magic bytes must raise ValidationError."""
         buf = io.BytesIO(b'Not a zip file at all \xff\xfe')
+        buf.seek(4)
         with self.assertRaises(ValidationError) as ctx:
             validate_zip_file(buf)
         self.assertIn('not a valid zip', str(ctx.exception).lower())
+        self.assertEqual(buf.tell(), 0)
 
     # ------------------------------------------------------------------
     # Zip-Slip / path traversal

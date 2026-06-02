@@ -30,8 +30,6 @@ terraform {
 
 provider "aws" {
   region = var.global_variables["region"]
-  access_key = "[AWS_ACCESS_KEY_ID]"
-  secret_key = "[AWS_ACCESS_SECRET_KEY]"
 }
 
 provider "kubernetes" {
