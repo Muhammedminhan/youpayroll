@@ -20,6 +20,11 @@ esac
 
 # Check if wait-for-postgres is requested or if PostgreSQL is the active engine
 if [ "$DATABASE" = "postgres" ] || echo "$DATABASE_ENGINE" | grep -iq "postgres"; then
+    if [ -z "$DATABASES_HOST" ] || [ -z "$DATABASES_PORT" ]; then
+        echo "ERROR: DATABASES_HOST and DATABASES_PORT must be set when using PostgreSQL." >&2
+        exit 1
+    fi
+
     echo "Waiting for PostgreSQL at $DATABASES_HOST:$DATABASES_PORT..."
 
     # Loop until PostgreSQL is ready to accept connections or timeout is reached (60 seconds)

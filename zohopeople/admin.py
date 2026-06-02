@@ -29,4 +29,4 @@ class ZohoPeopleFormTokenAdmin(admin.ModelAdmin):
         return False  # Tokens must only be created via management command
 
     def has_delete_permission(self, request, obj=None):
-        return request.user.is_superuser
+        return False  # Preserve singleton token row; recreate via management command if needed

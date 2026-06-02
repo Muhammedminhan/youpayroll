@@ -14,8 +14,8 @@ RUN apk add --no-cache \
     netcat-openbsd
 
 COPY requirements.txt /youpayroll/
-RUN pip install --upgrade pip
-RUN pip install -r requirements.txt
+RUN pip install --no-cache-dir --upgrade pip \
+    && pip install --no-cache-dir -r requirements.txt
 
 COPY . /youpayroll/
 RUN chmod +x /youpayroll/entrypoint.sh

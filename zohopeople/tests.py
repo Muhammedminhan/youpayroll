@@ -32,6 +32,18 @@ class ZohoPeopleFormTokenAdminTest(TestCase):
         request.user = AnonymousUser()
         self.assertFalse(self.admin.has_module_permission(request))
 
+    def test_token_singleton_cannot_be_deleted_from_admin(self):
+        superuser = User.objects.create_superuser(
+            username='zoho_delete_admin',
+            email='zoho_delete_admin@example.com',
+            password='password',
+        )
+
+        request = self.factory.get('/admin/zohopeople/zohopeopleformtoken/')
+        request.user = superuser
+
+        self.assertFalse(self.admin.has_delete_permission(request))
+
 
 class ZohoUtilsTest(TestCase):
     def setUp(self):
