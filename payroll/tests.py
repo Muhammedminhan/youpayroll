@@ -10,7 +10,7 @@ from .forms import PayRunForm
 from .models import Form16, Form16Entry, PayRun, PayRunStatusChoices
 from .serializers import Form16EntrySerializer
 from .tasks import extract_form16_zip_task
-from .upload_helpers import validate_zip_file
+from .upload_helpers import form16_extracted_path, validate_zip_file
 from .utils import get_latest_payrun
 
 
@@ -55,6 +55,14 @@ def _make_zip_with_info(info, data, compress_type=zipfile.ZIP_STORED):
 # ---------------------------------------------------------------------------
 # PayRunForm tests (pre-existing)
 # ---------------------------------------------------------------------------
+
+class Form16UploadPathTest(TestCase):
+    def test_form16_entry_upload_path_matches_extraction_task_directory(self):
+        self.assertEqual(
+            form16_extracted_path(None, 'form16.pdf'),
+            'uploads/payroll/form16/extracted/form16.pdf',
+        )
+
 
 class Form16EntrySerializerTest(TestCase):
     def test_form16_entry_uses_unambiguous_related_form16_fields(self):

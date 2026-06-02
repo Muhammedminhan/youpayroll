@@ -10,7 +10,7 @@ def form16_extracted_path(instance, filename):
     """
     Returns the path for extracting Form16 files.
     """
-    return f'uploads/payroll/form16_extracted/{filename}'
+    return f'uploads/payroll/form16/extracted/{filename}'
 
 def validate_zip_file(file):
     """
