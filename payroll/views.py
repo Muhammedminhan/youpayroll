@@ -20,7 +20,11 @@ class PayRunViewSet(viewsets.ReadOnlyModelViewSet):
     """
     permission_classes = [permissions.IsAdminUser]
     serializer_class = PayRunSerializer
-    queryset = PayRun.objects.all().order_by('-created_at')
+    queryset = (
+        PayRun.objects
+        .prefetch_related('payrecordregister_set')
+        .order_by('-created_at')
+    )
 
 class PaymentViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
@@ -37,7 +41,12 @@ class PayRecordRegisterViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = PayRecordRegister.objects.none()
 
     def get_queryset(self):
-        return PayRecordRegister.objects.filter(payee__user=self.request.user).order_by('-record_created')
+        return (
+            PayRecordRegister.objects
+            .select_related('pay_run', 'payee')
+            .filter(payee__user=self.request.user)
+            .order_by('-record_created')
+        )
 
 class Form16ViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [permissions.IsAdminUser]
@@ -50,4 +59,8 @@ class Form16EntryViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Form16Entry.objects.none()
 
     def get_queryset(self):
-        return Form16Entry.objects.filter(payee__user=self.request.user)
+        return (
+            Form16Entry.objects
+            .select_related('financial_year')
+            .filter(payee__user=self.request.user)
+        )
