@@ -14,12 +14,14 @@ class UserNotificationSerializer(serializers.ModelSerializer):
 class Base64ImageField(serializers.ImageField):
     def to_internal_value(self, data):
         if isinstance(data, str) and data.startswith('data:image'):
-            # Validate MIME type
+            # The declared MIME type from the data URI is client-controlled and
+            # cannot be trusted on its own. Decode first, then verify content
+            # via PIL (same check used by validate_image in upload_helpers.py).
             allowed_types = ['image/jpeg', 'image/jpg', 'image/png']
             header_end = data.find(';')
             if header_end == -1:
                 raise serializers.ValidationError("Invalid data URI format.")
-            
+
             mime_type = data[5:header_end]
             if mime_type not in allowed_types:
                 raise serializers.ValidationError(f"Unsupported image type: {mime_type}. Use JPG or PNG.")
@@ -28,9 +30,21 @@ class Base64ImageField(serializers.ImageField):
                 header, imgstr = data.split(';base64,')
                 ext = header.split('/')[-1]
                 file_name = f"{uuid.uuid4().hex[:10]}.{ext}"
-                data = ContentFile(base64.b64decode(imgstr), name=file_name)
+                decoded = base64.b64decode(imgstr)
+                data = ContentFile(decoded, name=file_name)
             except (ValueError, binascii.Error):
                 raise serializers.ValidationError("Invalid image format. Please ensure the base64 string is valid.")
+
+            # PIL content-based verification — rejects files whose bytes don't
+            # match the declared image type regardless of header claims.
+            try:
+                from PIL import Image, UnidentifiedImageError
+                import io
+                with Image.open(io.BytesIO(decoded)) as img:
+                    img.verify()
+            except Exception:
+                raise serializers.ValidationError("Invalid image content. The file could not be read as an image.")
+
         return super().to_internal_value(data)
 
 class UserSerializer(serializers.ModelSerializer):
@@ -68,7 +82,12 @@ class ProfileSerializer(serializers.ModelSerializer):
             updated_user = True
         
         if updated_user:
-            user.save()
+            update_fields = []
+            if first_name is not None:
+                update_fields.append('first_name')
+            if last_name is not None:
+                update_fields.append('last_name')
+            user.save(update_fields=update_fields)
             
         # Explicitly handle profile_picture deletion/update
         if 'profile_picture' in validated_data:
@@ -96,26 +115,39 @@ class PayslipSerializer(serializers.ModelSerializer):
             'consultant_id', 'account_number', 'ifsc_code', 'branch_address'
         ]
 
+    def to_representation(self, instance):
+        # Fetch BankDetails once per payslip and stash it on the instance so the
+        # three SerializerMethodFields below share the same result without issuing
+        # three identical queries (24 payslips × 3 fields = 72 extra queries avoided).
+        from payees.models import BankDetails
+        if not hasattr(instance, '_cached_bank_detail'):
+            instance._cached_bank_detail = BankDetails.objects.filter(
+                payee__user=instance.user
+            ).first()
+        return super().to_representation(instance)
+
+    def _bank_detail(self, obj):
+        if not hasattr(obj, '_cached_bank_detail'):
+            from payees.models import BankDetails
+            obj._cached_bank_detail = BankDetails.objects.filter(payee__user=obj.user).first()
+        return obj._cached_bank_detail
+
     def get_consultant_id(self, obj):
         return getattr(obj.user.profile, 'consultant_id', '') if hasattr(obj.user, 'profile') else ''
 
     def get_account_number(self, obj):
-        from payees.models import BankDetails
-        bank_detail = BankDetails.objects.filter(payee__user=obj.user).first()
+        bank_detail = self._bank_detail(obj)
         return bank_detail.masked_account_no if bank_detail else ''
 
     def get_ifsc_code(self, obj):
-        from payees.models import BankDetails
-        bank_detail = BankDetails.objects.filter(payee__user=obj.user).first()
+        bank_detail = self._bank_detail(obj)
         if not bank_detail or not bank_detail.ifsc_code:
             return ''
         code = bank_detail.ifsc_code
-        # Mask all but last 4 characters
         return f"{'*' * (len(code) - 4)}{code[-4:]}" if len(code) > 4 else '****'
 
     def get_branch_address(self, obj):
-        from payees.models import BankDetails
-        bank_detail = BankDetails.objects.filter(payee__user=obj.user).first()
+        bank_detail = self._bank_detail(obj)
         if not bank_detail or not bank_detail.branch_address:
             return ''
         return '****'

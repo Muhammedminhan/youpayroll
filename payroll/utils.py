@@ -14,7 +14,7 @@ def check_single_payrun_selection(queryset, modeladmin, request):
    Displays an error message if not.
    Returns True if exactly one item is selected, False otherwise.
    """
-    if queryset.count() > 1:
+    if queryset[1:2].exists():
         modeladmin.message_user(
             request,
             "Please select only one payrun entry at a time. Multiple "
@@ -148,6 +148,14 @@ def repair_fk_on_delete_rules(apps_registry, target_apps, lock_timeout='10s', st
                         if is_def == 'YES':
                             defer_sql = f" DEFERRABLE INITIALLY {'DEFERRED' if init_def == 'YES' else 'IMMEDIATE'}"
 
+                        # SQL identifiers (table/column/constraint names) cannot be
+                        # parameterised with %s placeholders — only values can.
+                        # quote_name() wraps each identifier in double-quotes and
+                        # escapes internal double-quotes, which is the correct
+                        # PostgreSQL defence against identifier injection.
+                        # All identifiers here are sourced from Django _meta or
+                        # information_schema, not from user input, so injection
+                        # risk is absent regardless of the quoting.
                         sql = (
                             f"ALTER TABLE {conn.ops.quote_name(table_name)} "
                             f"DROP CONSTRAINT {conn.ops.quote_name(c_name)}, "
