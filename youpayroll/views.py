@@ -40,9 +40,10 @@ class LegacyHealthCheck(LivenessCheck):
 
 class DRFTokenAuthGraphQLView(FileUploadGraphQLView):
     """
-    A custom GraphQL view that enforces token-only authentication using DRF's
-    TokenAuthentication. It bypasses and ignores Django's cookie-based SessionAuthentication
-    to protect the endpoint against CSRF attacks, and returns HTTP 401 response if missing or invalid.
+    A custom GraphQL view that enforces Knox token authentication via CookieKnoxAuthentication.
+    Accepts the token from the Authorization header (no CSRF check required) or from the
+    auth_token HttpOnly cookie (CSRF enforced for unsafe methods). Ignores session auth
+    entirely and returns HTTP 401 if credentials are missing or invalid.
     """
     def dispatch(self, request, *args, **kwargs):
         # CORS preflight OPTIONS requests are sent without authorization headers; bypass token auth.

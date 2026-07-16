@@ -155,7 +155,7 @@ const Wiki = () => {
         category: editData.category || null
       };
 
-      const csrfToken = document.cookie.match(/(?:^|;\s*)csrftoken=([^;]+)/)?.[1] ?? '';
+      const csrfToken = decodeURIComponent(document.cookie.match(/(?:^|;\s*)csrftoken=([^;]+)/)?.[1] ?? '');
       const response = await fetch(url, {
         method,
         credentials: 'include',

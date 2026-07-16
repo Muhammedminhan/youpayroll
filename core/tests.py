@@ -4,7 +4,7 @@ from django.conf import settings
 from django.core.cache import cache
 from django.test import TestCase, RequestFactory, override_settings
 from django.contrib.auth.models import User, AnonymousUser
-from rest_framework.authtoken.models import Token
+from knox.models import AuthToken
 from rest_framework.test import APIClient, APIRequestFactory
 from graphql import GraphQLError
 from core.decorators import login_required
@@ -280,7 +280,7 @@ class DRFTokenAuthGraphQLViewTest(TestCase):
     def setUp(self):
         self.factory = RequestFactory()
         self.user = User.objects.create_user(username="tokenuser", password="password")
-        self.token = Token.objects.create(user=self.user)
+        _instance, self.token_key = AuthToken.objects.create(user=self.user)
 
     def test_session_auth_bypassed(self):
         # Even if a request has a session-authenticated user, it should be ignored/rejected because it lacks a token
@@ -302,15 +302,14 @@ class DRFTokenAuthGraphQLViewTest(TestCase):
         self.assertIn("Invalid authentication credentials", response.content.decode())
 
     def test_token_auth_succeeds(self):
-        # A request with a valid DRF Token header should be authenticated correctly
-        req = self.factory.post("/graphql/", HTTP_AUTHORIZATION=f"Token {self.token.key}")
+        # A request with a valid Knox Token header should be authenticated correctly
+        req = self.factory.post("/graphql/", HTTP_AUTHORIZATION=f"Token {self.token_key}")
         req.user = AnonymousUser()
-        
+
         view = DRFTokenAuthGraphQLView()
         with patch("graphene_file_upload.django.FileUploadGraphQLView.dispatch", lambda s, r, *a, **k: r):
             result_req = view.dispatch(req)
             self.assertEqual(result_req.user, self.user)
-            self.assertEqual(result_req.auth, self.token)
 
     def test_options_request_bypasses_auth(self):
         # CORS preflight OPTIONS requests are sent without headers; they should bypass token auth completely

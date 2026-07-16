@@ -90,7 +90,12 @@ const Payslips = () => {
             document.body.appendChild(link);
             link.click();
             link.remove();
-            window.URL.revokeObjectURL(blobUrl);
+            if (action === 'Download') {
+                window.URL.revokeObjectURL(blobUrl);
+            } else {
+                // Delay revocation so the new tab has time to load the blob
+                setTimeout(() => window.URL.revokeObjectURL(blobUrl), 60000);
+            }
         } catch (err) {
             console.error('File action error:', err);
         }

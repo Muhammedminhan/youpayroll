@@ -34,10 +34,14 @@ class CookieKnoxAuthentication(KnoxTokenAuthentication):
             _csrf_middleware.process_request(request)
             reason = _csrf_middleware.process_view(request, None, (), {})
             if reason:
-                raise AuthenticationFailed(f'CSRF validation failed: {reason}')
+                raise AuthenticationFailed(f'CSRF validation failed: {getattr(reason, "reason_phrase", str(reason))}')
 
+        prior_auth = request.META.get('HTTP_AUTHORIZATION')
         request.META['HTTP_AUTHORIZATION'] = f'Token {raw_token}'
         try:
             return super().authenticate(request)
         finally:
-            del request.META['HTTP_AUTHORIZATION']
+            if prior_auth is None:
+                request.META.pop('HTTP_AUTHORIZATION', None)
+            else:
+                request.META['HTTP_AUTHORIZATION'] = prior_auth

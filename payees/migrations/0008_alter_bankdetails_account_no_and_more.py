@@ -14,7 +14,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='bankdetails',
             name='account_no',
-            field=encrypted_model_fields.fields.EncryptedCharField(blank=True, null=True),
+            field=encrypted_model_fields.fields.EncryptedCharField(blank=True, max_length=100, null=True),
         ),
         migrations.AlterField(
             model_name='bankdetails',
@@ -24,21 +24,21 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='bankdetails',
             name='ifsc_code',
-            field=encrypted_model_fields.fields.EncryptedCharField(blank=True, null=True),
+            field=encrypted_model_fields.fields.EncryptedCharField(blank=True, max_length=100, null=True),
         ),
         migrations.AlterField(
             model_name='bankdetails',
             name='micr_code',
-            field=encrypted_model_fields.fields.EncryptedCharField(blank=True, null=True),
+            field=encrypted_model_fields.fields.EncryptedCharField(blank=True, max_length=100, null=True),
         ),
         migrations.AlterField(
             model_name='bankdetails',
             name='swift_code',
-            field=encrypted_model_fields.fields.EncryptedCharField(blank=True, null=True),
+            field=encrypted_model_fields.fields.EncryptedCharField(blank=True, max_length=100, null=True),
         ),
         migrations.AlterField(
             model_name='payee',
             name='pan_no',
-            field=encrypted_model_fields.fields.EncryptedCharField(blank=True, null=True, unique=True),
+            field=encrypted_model_fields.fields.EncryptedCharField(blank=True, max_length=10, null=True, unique=True),
         ),
     ]
