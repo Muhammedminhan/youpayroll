@@ -165,7 +165,8 @@ def extract_form16_zip_task(form16_id):
                             continue
 
                         try:
-                            payee = Payee.objects.get(pan_no=pan_no)
+                            pan_hash = Payee._hash_pan(pan_no)
+                            payee = Payee.objects.get(pan_no_hash=pan_hash)
                         except Payee.DoesNotExist:
                             logger.warning("Payee with PAN %s not found for file %r. Skipping orphan creation.", pan_no, cleaned_filename)
                             skipped_files.append(f"{file_name}: no payee found for PAN {pan_no}")

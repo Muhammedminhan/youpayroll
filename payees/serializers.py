@@ -24,15 +24,26 @@ class BankDetailSerializer(serializers.ModelSerializer):
         return ret
 
 class PayeeSerializer(serializers.ModelSerializer):
+    """General-purpose payee serializer. pan_no is excluded — use PayeePanSerializer for privileged PAN updates."""
     bank_details = BankDetailSerializer(source='bankdetails_set', many=True, read_only=True)
+
     class Meta:
         model = Payee
         fields = [
-            'id', 'hrm_id', 'full_name', 'email', 'pan_no', 
+            'id', 'hrm_id', 'full_name', 'email',
             'date_of_joining', 'address', 'status', 'is_dark_mode',
             'bank_details'
         ]
         read_only_fields = ['id', 'hrm_id', 'status']
+
+
+class PayeePanSerializer(serializers.ModelSerializer):
+    """Privileged serializer for reading/updating pan_no. Reads return a masked value; writes accept a real PAN."""
+
+    class Meta:
+        model = Payee
+        fields = ['id', 'pan_no']
+        read_only_fields = ['id']
 
     def to_representation(self, instance):
         ret = super().to_representation(instance)

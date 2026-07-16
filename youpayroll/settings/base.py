@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 
 from pathlib import Path
 from decouple import config
+from django.core.exceptions import ImproperlyConfigured
 import os
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -22,6 +23,18 @@ BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
 SECRET_KEY = config('SECRET_KEY', default='django-insecure-default-key-for-dev-and-test')
 FIELD_ENCRYPTION_KEY = config('FIELD_ENCRYPTION_KEY')
+
+# Separate HMAC key for PAN uniqueness hashing. Must be set in production to a
+# random secret distinct from SECRET_KEY — rotating SECRET_KEY without re-hashing
+# would silently break all PAN lookups if this fell back to SECRET_KEY.
+_pan_hash_key = config('PAN_HASH_KEY', default='')
+if not _pan_hash_key and not config('SECRET_KEY', default='django-insecure-default-key-for-dev-and-test').startswith('django-insecure-'):
+    raise ImproperlyConfigured(
+        "PAN_HASH_KEY must be set in production. "
+        "It is used to HMAC-hash PAN numbers for uniqueness lookups and must "
+        "not fall back to SECRET_KEY, which may be rotated independently."
+    )
+PAN_HASH_KEY = _pan_hash_key or None
 
 # SECURITY WARNING: don't run with debug turned on in production!
 

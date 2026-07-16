@@ -15,7 +15,8 @@ logger = logging.getLogger(__name__)
 
 
 def _safe_google_token_claims(credential):
-    """Return non-sensitive token claims for diagnostics without verifying."""
+    """Decode JWT payload for diagnostic logging ONLY — the signature is NOT verified.
+    Never use the returned claims for authentication or authorization decisions."""
     try:
         _header, payload, *_rest = credential.split('.')
         padding = '=' * (-len(payload) % 4)
