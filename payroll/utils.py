@@ -56,10 +56,11 @@ def get_month_name(month):
     return month_names.get(month)
 
 
-def repair_fk_on_delete_rules(apps_registry, target_apps, lock_timeout='10s', strict=False, stdout=None, connection=None):
+def repair_fk_on_delete_rules(apps_registry, target_apps, lock_timeout='10s', strict=False, dry_run=False, stdout=None, connection=None):
     """
     Audits and repairs PostgreSQL foreign key ON DELETE rules to match the provided apps_registry.
     apps_registry can be the historical 'apps' from a migration or the current 'django.apps'.
+    When dry_run=True, reports mismatches without executing any DDL.
     """
     conn = connection or default_connection
     if conn.vendor != 'postgresql':
@@ -164,6 +165,13 @@ def repair_fk_on_delete_rules(apps_registry, target_apps, lock_timeout='10s', st
                             f"REFERENCES {conn.ops.quote_name(target_table)} ({conn.ops.quote_name(target_column)}) "
                             f"ON DELETE {expected_delete_rule} ON UPDATE {u_rule}{defer_sql} NOT VALID"
                         )
+                        if dry_run:
+                            if stdout:
+                                stdout.write(f"[dry-run] Would repair: {table_name}.{field.column} {d_rule} -> {expected_delete_rule}")
+                            logger.info("[dry-run] Would repair FK %s.%s: %s -> %s", table_name, field.column, d_rule, expected_delete_rule)
+                            repaired_count += 1
+                            continue
+
                         try:
                             cursor.execute(sql)
                             try:

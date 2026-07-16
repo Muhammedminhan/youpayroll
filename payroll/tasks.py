@@ -128,9 +128,10 @@ def run_pay_run_task(payrun_id):
 
 @shared_task
 def extract_form16_zip_task(form16_id):
-    # select_for_update + re-check makes the task safe to retry: if a worker
-    # crashed after extraction but before is_extracted was saved, a retry
-    # acquires the lock, sees is_extracted=False, and re-runs correctly.
+    # select_for_update serialises concurrent retries: if two workers race, the
+    # second acquires the lock after the first sets is_extracted=True and exits
+    # early.  The lock is released as soon as the with block ends; the already-
+    # loaded instance is used for the I/O work without holding any row lock.
     with transaction.atomic():
         try:
             instance = Form16.objects.select_for_update().get(pk=form16_id)
@@ -138,13 +139,6 @@ def extract_form16_zip_task(form16_id):
             return
         if not instance.form16_zip_file or instance.is_extracted:
             return
-        # Re-read outside the lock for the actual I/O work below.
-        instance_id = instance.pk
-
-    try:
-        instance = Form16.objects.get(pk=instance_id)
-    except Form16.DoesNotExist:
-        return
 
     extracted_files = []
     skipped_files = []

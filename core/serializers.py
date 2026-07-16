@@ -71,22 +71,15 @@ class ProfileSerializer(serializers.ModelSerializer):
         first_name = validated_data.pop('first_name', None)
         last_name = validated_data.pop('last_name', None)
         
-        # Update User model if name is provided
         user = instance.user
-        updated_user = False
+        update_fields = []
         if first_name is not None:
             user.first_name = first_name
-            updated_user = True
+            update_fields.append('first_name')
         if last_name is not None:
             user.last_name = last_name
-            updated_user = True
-        
-        if updated_user:
-            update_fields = []
-            if first_name is not None:
-                update_fields.append('first_name')
-            if last_name is not None:
-                update_fields.append('last_name')
+            update_fields.append('last_name')
+        if update_fields:
             user.save(update_fields=update_fields)
             
         # Explicitly handle profile_picture deletion/update
