@@ -220,7 +220,7 @@ class AdminNotificationView(generics.ListAPIView):
     queryset = AdminNotification.objects.filter(is_active=True)
 
 class WikiCategoryViewSet(viewsets.ModelViewSet):
-    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+    permission_classes = [permissions.IsAuthenticated]
     serializer_class = WikiCategorySerializer
     queryset = WikiCategory.objects.all()
     
@@ -236,7 +236,7 @@ class WikiCategoryViewSet(viewsets.ModelViewSet):
         serializer.save(slug=slugify(name))
 
 class WikiPageViewSet(viewsets.ModelViewSet):
-    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+    permission_classes = [permissions.IsAuthenticated]
     serializer_class = WikiPageSerializer
     queryset = WikiPage.objects.all()
     lookup_field = 'slug'

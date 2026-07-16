@@ -43,11 +43,13 @@ def run_pay_run_task(payrun_id):
     error_log = []
 
     try:
-        with transaction.atomic():
-            for payee in payees:
-                logger.info('Processing payee: %s', payee)
-
-                try:
+        for payee in payees:
+            logger.info('Processing payee: %s', payee)
+            # Each payee gets its own savepoint so a DB-level error (deadlock, constraint
+            # violation) rolls back only that payee's record and leaves all previously
+            # committed records intact.
+            try:
+                with transaction.atomic():
                     # Idempotency check: Skip if record already exists for this pay run
                     if PayRecordRegister.objects.filter(pay_run=pay_run, payee=payee).exists():
                         logger.info('PayRecordRegister already exists for payee: %s. Skipping.', payee.full_name)
@@ -61,22 +63,31 @@ def run_pay_run_task(payrun_id):
                     else:
                         next_month = datetime.date(pay_run.year, pay_run.month + 1, 1)
                     end_of_month = next_month - datetime.timedelta(days=1)
-                    
-                    # Get the most recent payment that was active during this pay run's month
-                    total_amount = Payment.objects.filter(
+
+                    month_start = datetime.date(pay_run.year, pay_run.month, 1)
+
+                    # Sum all active payment rows for this pay run period.
+                    # Multiple active Payment rows are summed rather than arbitrarily
+                    # picking one (e.g. when a payee has both a base and an allowance row
+                    # with the same effective_from date).
+                    active_payments = Payment.objects.filter(
                         payee=payee,
-                        effective_from__lte=end_of_month
+                        effective_from__lte=end_of_month,
                     ).filter(
-                        Q(effective_to__isnull=True) | Q(effective_to__gte=datetime.date(pay_run.year, pay_run.month, 1))
-                    ).latest('effective_from')
+                        Q(effective_to__isnull=True) | Q(effective_to__gte=month_start)
+                    )
+                    if not active_payments.exists():
+                        raise Payment.DoesNotExist
+
+                    total_gross = sum(p.amount for p in active_payments)
 
                     tds_percentage = Decimal(str(payee.tds_type.tds_percentage if payee.tds_type else 0))
-                    tds_amount = (total_amount.amount * tds_percentage) / Decimal('100')
-                    total_net_income = total_amount.amount - tds_amount
+                    tds_amount = (Decimal(str(total_gross)) * tds_percentage) / Decimal('100')
+                    total_net_income = Decimal(str(total_gross)) - tds_amount
 
                     PayRecordRegister.objects.create(
                         pay_run=pay_run,
-                        amount=total_amount.amount,
+                        amount=total_gross,
                         payee=payee,
                         bank_name=bank_details.bank_name,
                         account_number=bank_details.account_no,
@@ -87,42 +98,52 @@ def run_pay_run_task(payrun_id):
                         swift_code=bank_details.swift_code,
                         branch_address=bank_details.branch_address,
                         tds_percentage=tds_percentage,
-                        gross_amount=total_amount.amount,
+                        gross_amount=total_gross,
                         net_income=total_net_income,
                     )
                     logger.info('PayRecordRegister created for payee: %s', payee.full_name)
 
-                except BankDetails.DoesNotExist:
-                    error_log.append(f"{payee.full_name} - Missing acknowledged bank details")
-                except Payment.DoesNotExist:
-                    error_log.append(f"{payee.full_name} - No payment data available")
-                except Exception as e:
-                    logger.error(f"Unexpected error for payee {payee}: {e}")
-                    error_log.append(f"{payee.full_name} - Unexpected error: {e}")
+            except BankDetails.DoesNotExist:
+                error_log.append(f"{payee.full_name} - Missing acknowledged bank details")
+            except Payment.DoesNotExist:
+                error_log.append(f"{payee.full_name} - No payment data available")
+            except Exception as e:
+                logger.error(f"Unexpected error for payee {payee}: {e}")
+                error_log.append(f"{payee.full_name} - Unexpected error: {e}")
 
-            if error_log:
-                pay_run.error_log = '\n'.join(error_log)
-            else:
-                pay_run.error_log = 'PayRecordRegister created successfully for every payee.'
-
+        # Status update committed in its own transaction so a previous DB error
+        # during payee processing doesn't prevent the final status being saved.
+        with transaction.atomic():
+            pay_run.error_log = '\n'.join(error_log) if error_log else 'PayRecordRegister created successfully for every payee.'
             pay_run.status = PayRunStatusChoices.COMPLETED
             pay_run.save()
     except Exception as e:
         logger.error(f"Error in run_pay_run_task {payrun_id}: {e}")
-        pay_run.status = PayRunStatusChoices.REJECTED
-        pay_run.error_log = f"Critical error during pay run: {e}"
-        pay_run.save()
+        with transaction.atomic():
+            pay_run.status = PayRunStatusChoices.REJECTED
+            pay_run.error_log = f"Critical error during pay run: {e}"
+            pay_run.save()
 
     logger.info('PayRun %s processing completed.', payrun_id)
 
 @shared_task
 def extract_form16_zip_task(form16_id):
-    try:
-        instance = Form16.objects.get(pk=form16_id)
-    except Form16.DoesNotExist:
-        return
+    # select_for_update + re-check makes the task safe to retry: if a worker
+    # crashed after extraction but before is_extracted was saved, a retry
+    # acquires the lock, sees is_extracted=False, and re-runs correctly.
+    with transaction.atomic():
+        try:
+            instance = Form16.objects.select_for_update().get(pk=form16_id)
+        except Form16.DoesNotExist:
+            return
+        if not instance.form16_zip_file or instance.is_extracted:
+            return
+        # Re-read outside the lock for the actual I/O work below.
+        instance_id = instance.pk
 
-    if not instance.form16_zip_file or instance.is_extracted:
+    try:
+        instance = Form16.objects.get(pk=instance_id)
+    except Form16.DoesNotExist:
         return
 
     extracted_files = []
@@ -158,8 +179,13 @@ def extract_form16_zip_task(form16_id):
                             skipped_files.append(f"{file_name}: could not derive a valid PAN from filename")
                             continue
 
-                        # Idempotency check: Skip if entry already exists for this financial year and filename
-                        if Form16Entry.objects.filter(financial_year=instance, form_16__contains=cleaned_filename).exists():
+                        # Idempotency check: match exact basename to avoid false positives
+                        # from __contains when two years share a filename. We match on the
+                        # trailing path component (/<filename>) rather than any substring.
+                        if Form16Entry.objects.filter(
+                            financial_year=instance,
+                            form_16__endswith=f'/{cleaned_filename}',
+                        ).exists():
                             logger.info("Form 16 entry for %r already exists. Skipping.", cleaned_filename)
                             skipped_files.append(f"{file_name}: entry already exists")
                             continue

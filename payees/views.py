@@ -2,6 +2,7 @@ from rest_framework import viewsets, permissions, mixins
 from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 from rest_framework import status
+from rest_framework.throttling import ScopedRateThrottle
 from django.db import IntegrityError, transaction
 from .models import Payee, BankDetails, BankDetailsAck
 from .serializers import PayeeSerializer, BankDetailSerializer, BankDetailAcknowledgementSerializer
@@ -30,28 +31,20 @@ class BankDetailViewSet(mixins.CreateModelMixin,
     tied to the bank-details row that was reviewed.
     """
     permission_classes = [permissions.IsAuthenticated]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = 'bank_details_mutation'
     serializer_class = BankDetailSerializer
     queryset = BankDetails.objects.all()
     
     def get_queryset(self):
         return BankDetails.objects.filter(payee__user=self.request.user)
 
-    def perform_create(self, serializer):
-        try:
-            payee = Payee.objects.get(user=self.request.user)
-        except Payee.DoesNotExist:
-            raise ValidationError({"detail": "User is not registered as a payee."})
-        serializer.save(payee=payee)
-
     def create(self, request, *args, **kwargs):
         try:
-            payee = Payee.objects.get(user=request.user)
-        except Payee.DoesNotExist:
-            raise ValidationError({"detail": "User is not registered as a payee."})
-
-        try:
             with transaction.atomic():
-                Payee.objects.select_for_update().get(pk=payee.pk)
+                # Single lookup inside the transaction; select_for_update prevents
+                # concurrent creates racing to insert duplicate BankDetails rows.
+                payee = Payee.objects.select_for_update().get(user=request.user)
                 bank_details = (
                     BankDetails.objects
                     .select_for_update()
@@ -78,8 +71,10 @@ class BankDetailViewSet(mixins.CreateModelMixin,
                     status=status.HTTP_201_CREATED,
                     headers=headers,
                 )
+        except Payee.DoesNotExist:
+            raise ValidationError({"detail": "User is not registered as a payee."})
         except IntegrityError:
-            bank_details = BankDetails.objects.filter(payee=payee).order_by('-id').first()
+            bank_details = BankDetails.objects.filter(payee__user=request.user).order_by('-id').first()
             if not bank_details:
                 raise
             serializer = self.get_serializer(
@@ -100,6 +95,8 @@ class BankDetailAcknowledgementViewSet(mixins.CreateModelMixin,
     Exposing only Create, List, and Retrieve.
     """
     permission_classes = [permissions.IsAuthenticated]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = 'ack_mutation'
     serializer_class = BankDetailAcknowledgementSerializer
     queryset = BankDetailsAck.objects.all()
     
