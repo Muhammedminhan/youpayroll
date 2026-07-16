@@ -28,6 +28,17 @@ FIELD_ENCRYPTION_KEY = config('FIELD_ENCRYPTION_KEY', default=None)
 if not FIELD_ENCRYPTION_KEY:
     raise ImproperlyConfigured('FIELD_ENCRYPTION_KEY must be set in production.')
 
+# HMAC key for PAN uniqueness hashing — must be distinct from SECRET_KEY so
+# rotating SECRET_KEY does not silently invalidate all stored pan_no_hash values,
+# which would break Form 16 extraction and PAN uniqueness enforcement.
+PAN_HASH_KEY = config('PAN_HASH_KEY', default=None)
+if not PAN_HASH_KEY:
+    raise ImproperlyConfigured(
+        'PAN_HASH_KEY must be set in production. '
+        'It is used to HMAC-hash PAN numbers for uniqueness lookups. '
+        'Rotating SECRET_KEY without a separate PAN_HASH_KEY would silently break all PAN lookups.'
+    )
+
 aws_settings = require_aws_s3_settings('production')
 AWS_STORAGE_BUCKET_NAME = aws_settings['AWS_STORAGE_BUCKET_NAME']
 AWS_S3_REGION_NAME = aws_settings['AWS_S3_REGION_NAME']
