@@ -7,6 +7,9 @@ from django.contrib.auth.models import User
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from auditlog.registry import auditlog
+import hashlib
+import hmac
+from django.conf import settings
 from encrypted_model_fields.fields import EncryptedCharField, EncryptedTextField
 from .upload_helpers import user_directory_path, validate_image
 from .constants import (STATUS_CHOICES, PAYEE_STATUS_HELP_TEXT)
@@ -24,8 +27,10 @@ class Payee(SafeDeleteModel):
                                  null=True)
     full_name = models.CharField(max_length=100, null=True, blank=True)
     email = models.EmailField(max_length=100, null=True, blank=True)
-    pan_no = EncryptedCharField(max_length=10, unique=True, null=True,
-                                blank=True)
+    pan_no = EncryptedCharField(max_length=10, null=True, blank=True)
+    # HMAC-SHA256 of pan_no used to enforce uniqueness without storing plaintext.
+    # EncryptedCharField is non-deterministic so DB unique=True on it is unreliable.
+    pan_no_hash = models.CharField(max_length=64, unique=True, null=True, blank=True, editable=False)
     date_of_joining = models.CharField(max_length=50, null=True, blank=True)
     address = models.TextField(null=True, blank=True)
     is_dark_mode = models.BooleanField(default=False,
@@ -38,7 +43,13 @@ class Payee(SafeDeleteModel):
     def masked_pan_no(self):
         return "**********" if self.pan_no else ""
 
+    @staticmethod
+    def _hash_pan(pan_no):
+        key = (getattr(settings, 'PAN_HASH_KEY', None) or settings.SECRET_KEY).encode()
+        return hmac.new(key, pan_no.upper().encode(), hashlib.sha256).hexdigest()
+
     def save(self, *args, **kwargs):
+        self.pan_no_hash = self._hash_pan(self.pan_no) if self.pan_no else None
         with transaction.atomic():
             if self.user_id and self.email:
                 EmailValidator()(self.email)

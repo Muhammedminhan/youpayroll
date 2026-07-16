@@ -461,3 +461,54 @@ class PayrollRESTMaskingTest(TestCase):
         self.assertEqual(data["micr_code"], "****")
         self.assertEqual(data["swift_code"], "****")
         self.assertEqual(data["branch_address"], "****")
+
+
+class CookieAuthFlowTest(TestCase):
+    """Tests for cookie-based auth: CSRF bootstrap, login sets cookie, logout clears it."""
+
+    def setUp(self):
+        self.client = APIClient()
+        self.user = User.objects.create_user(username="cookieuser", password="password")
+
+    def test_csrf_endpoint_sets_csrftoken_cookie(self):
+        response = self.client.get('/api/csrf/')
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('csrftoken', response.cookies)
+
+    @patch("core.views.id_token.verify_oauth2_token")
+    def test_google_login_sets_auth_cookie(self, mock_verify):
+        mock_verify.return_value = {
+            "email": "cookieuser@yougotagift.com",
+            "given_name": "Cookie",
+            "family_name": "User",
+        }
+        response = self.client.post('/api/google-login/', {"credential": "token"}, format="json")
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(settings.AUTH_COOKIE_NAME, response.cookies)
+        cookie = response.cookies[settings.AUTH_COOKIE_NAME]
+        self.assertTrue(cookie['httponly'])
+        self.assertEqual(cookie['path'], settings.AUTH_COOKIE_PATH)
+
+    def test_logout_deletes_auth_cookie_and_knox_token(self):
+        _instance, token_key = AuthToken.objects.create(user=self.user)
+        self.client.cookies[settings.AUTH_COOKIE_NAME] = token_key
+        # Bootstrap CSRF so the cookie is present
+        csrf_response = self.client.get('/api/csrf/')
+        csrftoken = csrf_response.cookies.get('csrftoken')
+        csrf_value = csrftoken.value if csrftoken else ''
+
+        response = self.client.post(
+            '/api/logout/',
+            HTTP_X_CSRFTOKEN=csrf_value,
+        )
+        self.assertEqual(response.status_code, 204)
+        # Cookie should be cleared (max-age=0 or expires in the past)
+        if settings.AUTH_COOKIE_NAME in response.cookies:
+            deleted = response.cookies[settings.AUTH_COOKIE_NAME]
+            self.assertTrue(deleted['max-age'] == 0 or deleted['expires'] == 'Thu, 01 Jan 1970 00:00:00 GMT')
+        # Knox token should be deleted
+        self.assertEqual(AuthToken.objects.filter(user=self.user).count(), 0)
+
+    def test_logout_unauthenticated_returns_401(self):
+        response = self.client.post('/api/logout/')
+        self.assertEqual(response.status_code, 401)

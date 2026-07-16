@@ -12,11 +12,13 @@ export const AuthProvider = ({ children }) => {
     const [loading, setLoading] = useState(true);
     const [isDarkMode, setIsDarkMode] = useState(localStorage.getItem('theme') === 'dark');
 
-    const clearLocalAuth = useCallback(() => {
+    const clearLocalAuth = useCallback((broadcast = true) => {
         setUser(null);
         setIsAuthenticated(false);
         localStorage.removeItem('user');
-        logoutChannel?.postMessage('logout');
+        if (broadcast) {
+            logoutChannel?.postMessage('logout');
+        }
     }, []);
 
     const logout = useCallback(async () => {
@@ -132,7 +134,7 @@ export const AuthProvider = ({ children }) => {
 
         // Sync logout across tabs
         const handleCrossTabLogout = (e) => {
-            if (e.data === 'logout') clearLocalAuth();
+            if (e.data === 'logout') clearLocalAuth(false);
         };
         logoutChannel?.addEventListener('message', handleCrossTabLogout);
         return () => logoutChannel?.removeEventListener('message', handleCrossTabLogout);

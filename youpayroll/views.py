@@ -3,7 +3,7 @@ from django.db import connection
 from django.http import HttpResponse, JsonResponse
 from django.views import View
 from graphene_file_upload.django import FileUploadGraphQLView
-from rest_framework.exceptions import AuthenticationFailed
+from rest_framework.exceptions import AuthenticationFailed, PermissionDenied
 from youpayroll.authentication import CookieKnoxAuthentication
 
 logger = logging.getLogger(__name__)
@@ -57,6 +57,8 @@ class DRFTokenAuthGraphQLView(FileUploadGraphQLView):
                 request.user, request.auth = auth_res
             else:
                 return JsonResponse({"detail": "Authentication credentials were not provided."}, status=401)
+        except PermissionDenied as exc:
+            return JsonResponse({"detail": str(exc), "code": "csrf_failed"}, status=403)
         except AuthenticationFailed:
             return JsonResponse({"detail": "Invalid authentication credentials."}, status=401)
         except Exception:

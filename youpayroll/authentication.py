@@ -1,7 +1,7 @@
 from django.conf import settings
 from django.middleware.csrf import CsrfViewMiddleware
 from knox.auth import TokenAuthentication as KnoxTokenAuthentication
-from rest_framework.exceptions import AuthenticationFailed
+from rest_framework.exceptions import AuthenticationFailed, PermissionDenied
 
 _csrf_middleware = CsrfViewMiddleware(get_response=lambda request: None)
 
@@ -34,7 +34,7 @@ class CookieKnoxAuthentication(KnoxTokenAuthentication):
             _csrf_middleware.process_request(request)
             reason = _csrf_middleware.process_view(request, None, (), {})
             if reason:
-                raise AuthenticationFailed(f'CSRF validation failed: {getattr(reason, "reason_phrase", str(reason))}')
+                raise PermissionDenied(f'CSRF validation failed: {getattr(reason, "reason_phrase", str(reason))}')
 
         prior_auth = request.META.get('HTTP_AUTHORIZATION')
         request.META['HTTP_AUTHORIZATION'] = f'Token {raw_token}'
