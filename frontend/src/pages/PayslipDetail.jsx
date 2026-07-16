@@ -22,9 +22,8 @@ const PayslipDetail = () => {
     const fetchPayslipDetail = async () => {
         setLoading(true);
         try {
-            const token = localStorage.getItem('token');
             const response = await fetch(`${API_BASE_URL}/payslips/?month=${selectedMonth}`, {
-                headers: { 'Authorization': `Token ${token}` }
+                credentials: 'include',
             });
             if (response.ok) {
                 const data = await response.json();
@@ -65,14 +64,11 @@ const PayslipDetail = () => {
             return;
         }
 
-        const token = localStorage.getItem('token');
         const baseUrl = MEDIA_BASE_URL;
         const fullUrl = payslip.file.startsWith('http') ? payslip.file : `${baseUrl}${payslip.file}`;
 
         try {
-            const response = await fetch(fullUrl, {
-                headers: { 'Authorization': `Token ${token}` }
-            });
+            const response = await fetch(fullUrl, { credentials: 'include' });
 
             if (!response.ok) throw new Error('Download failed');
 

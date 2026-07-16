@@ -7,6 +7,7 @@ from django.contrib.auth.models import User
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from auditlog.registry import auditlog
+from encrypted_model_fields.fields import EncryptedCharField, EncryptedTextField
 from .upload_helpers import user_directory_path, validate_image
 from .constants import (STATUS_CHOICES, PAYEE_STATUS_HELP_TEXT)
 from configs.models import TDS
@@ -23,8 +24,8 @@ class Payee(SafeDeleteModel):
                                  null=True)
     full_name = models.CharField(max_length=100, null=True, blank=True)
     email = models.EmailField(max_length=100, null=True, blank=True)
-    pan_no = models.CharField(max_length=10, unique=True, null=True,
-                               blank=True)
+    pan_no = EncryptedCharField(max_length=10, unique=True, null=True,
+                                blank=True)
     date_of_joining = models.CharField(max_length=50, null=True, blank=True)
     address = models.TextField(null=True, blank=True)
     is_dark_mode = models.BooleanField(default=False,
@@ -61,14 +62,14 @@ class BankDetails(models.Model):
     """ Stores the information of the Payee Bank Account details """
     payee = models.ForeignKey(Payee, on_delete=models.CASCADE)
     bank_name = models.CharField(max_length=100, null=True, blank=True)
-    account_no = models.CharField(max_length=100, null=True, blank=True)
+    account_no = EncryptedCharField(max_length=100, null=True, blank=True)
     account_holder_name = models.CharField(max_length=100, null=True,
                                            blank=True)
     account_type = models.CharField(max_length=10, null=True, blank=True)
-    ifsc_code = models.CharField(max_length=100, null=True, blank=True)
-    micr_code = models.CharField(max_length=100, null=True, blank=True)
-    swift_code = models.CharField(max_length=100, null=True, blank=True)
-    branch_address = models.TextField(null=True, blank=True)
+    ifsc_code = EncryptedCharField(max_length=100, null=True, blank=True)
+    micr_code = EncryptedCharField(max_length=100, null=True, blank=True)
+    swift_code = EncryptedCharField(max_length=100, null=True, blank=True)
+    branch_address = EncryptedTextField(null=True, blank=True)
     payee_acknowledgement = models.BooleanField(default=False, editable=False)
 
     @property

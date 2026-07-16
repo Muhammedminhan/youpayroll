@@ -9,13 +9,17 @@ export const MEDIA_BASE_URL = stripTrailingSlashes(
 
 const API_URL = API_BASE_URL;
 
+// All requests include credentials so the HttpOnly auth_token cookie is sent automatically.
+const defaultOptions = {
+    credentials: 'include',
+};
+
 export const googleLoginUser = async (credential) => {
     const response = await fetch(`${API_URL}/google-login/`, {
+        ...defaultOptions,
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ credential })
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ credential }),
     });
     if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
@@ -24,12 +28,17 @@ export const googleLoginUser = async (credential) => {
     return response.json();
 };
 
-export const getProfile = async (token) => {
-    const response = await fetch(`${API_URL}/profile/`, {
-        headers: {
-            'Authorization': `Token ${token}`
-        }
+export const logoutUser = async () => {
+    const response = await fetch(`${API_URL}/logout/`, {
+        ...defaultOptions,
+        method: 'POST',
     });
+    // 204 No Content on success; ignore non-ok (session may already be gone)
+    return response.ok || response.status === 401;
+};
+
+export const getProfile = async () => {
+    const response = await fetch(`${API_URL}/profile/`, defaultOptions);
     if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.error || errorData.detail || 'Failed to fetch profile');
@@ -37,12 +46,8 @@ export const getProfile = async (token) => {
     return response.json();
 };
 
-export const getPayslips = async (token) => {
-    const response = await fetch(`${API_URL}/payslips/`, {
-        headers: {
-            'Authorization': `Token ${token}`
-        }
-    });
+export const getPayslips = async () => {
+    const response = await fetch(`${API_URL}/payslips/`, defaultOptions);
     if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.error || errorData.detail || 'Failed to fetch payslips');
@@ -50,13 +55,11 @@ export const getPayslips = async (token) => {
     return response.json();
 };
 
-export const uploadDocument = async (token, formData) => {
+export const uploadDocument = async (formData) => {
     const response = await fetch(`${API_URL}/documents/`, {
+        ...defaultOptions,
         method: 'POST',
-        headers: {
-            'Authorization': `Token ${token}`
-        },
-        body: formData
+        body: formData,
     });
     if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
@@ -65,12 +68,8 @@ export const uploadDocument = async (token, formData) => {
     return response.json();
 };
 
-export const getUserNotifications = async (token) => {
-    const response = await fetch(`${API_URL}/user-notifications/`, {
-        headers: {
-            'Authorization': `Token ${token}`
-        }
-    });
+export const getUserNotifications = async () => {
+    const response = await fetch(`${API_URL}/user-notifications/`, defaultOptions);
     if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.error || errorData.detail || 'Failed to fetch notifications');
@@ -78,14 +77,12 @@ export const getUserNotifications = async (token) => {
     return response.json();
 };
 
-export const markNotificationAsRead = async (token, notifId) => {
+export const markNotificationAsRead = async (notifId) => {
     const response = await fetch(`${API_URL}/user-notifications/${notifId}/`, {
+        ...defaultOptions,
         method: 'PATCH',
-        headers: {
-            'Authorization': `Token ${token}`,
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ is_read: true })
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ is_read: true }),
     });
     if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
@@ -94,14 +91,12 @@ export const markNotificationAsRead = async (token, notifId) => {
     return response.json();
 };
 
-export const updateProfile = async (token, data) => {
+export const updateProfile = async (data) => {
     const response = await fetch(`${API_URL}/profile/`, {
+        ...defaultOptions,
         method: 'PATCH',
-        headers: {
-            'Authorization': `Token ${token}`,
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(data)
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
     });
     if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));

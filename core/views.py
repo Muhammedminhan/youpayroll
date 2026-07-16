@@ -23,7 +23,7 @@ def _safe_google_token_claims(credential):
 
 
 from django.contrib.auth.models import User
-from rest_framework.authtoken.models import Token
+from knox.models import AuthToken
 from django.shortcuts import get_object_or_404
 from django.utils.text import slugify
 from .models import (Profile, Payslip, Document, AdminNotification,
@@ -176,14 +176,23 @@ class GoogleLoginView(APIView):
                 user.email = email
                 user.save(update_fields=['email'])
 
-            token, _ = Token.objects.get_or_create(user=user)
-            
+            _knox_instance, token = AuthToken.objects.create(user=user)
+
             # Fetch profile to return full data
             profile, _ = Profile.objects.get_or_create(user=user)
             serializer = ProfileSerializer(profile)
             data = serializer.data
-            data['token'] = token.key
-            return Response(data)
+            response = Response(data)
+            response.set_cookie(
+                settings.AUTH_COOKIE_NAME,
+                token,
+                max_age=settings.AUTH_COOKIE_MAX_AGE,
+                httponly=settings.AUTH_COOKIE_HTTPONLY,
+                samesite=settings.AUTH_COOKIE_SAMESITE,
+                secure=not settings.DEBUG,
+                path=settings.AUTH_COOKIE_PATH,
+            )
+            return response
 
         except ValueError as exc:
             # Invalid token
@@ -238,7 +247,21 @@ class WikiPageViewSet(viewsets.ModelViewSet):
         slug = slugify(title)
         if WikiPage.objects.filter(slug=slug).exists():
             slug = f"{slug}-{uuid.uuid4().hex[:6]}"
-        
+
         # Only set author if user is authenticated
         author = self.request.user if self.request.user.is_authenticated else None
         serializer.save(author=author, slug=slug)
+
+
+class LogoutView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        # Invalidate the current Knox token server-side
+        request.auth.delete()
+        response = Response(status=status.HTTP_204_NO_CONTENT)
+        response.delete_cookie(
+            settings.AUTH_COOKIE_NAME,
+            path=settings.AUTH_COOKIE_PATH,
+        )
+        return response

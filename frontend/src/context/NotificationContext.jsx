@@ -11,15 +11,14 @@ export const NotificationProvider = ({ children }) => {
     const fetchingRef = React.useRef(false);
 
     const fetchNotifications = useCallback(async () => {
-        const token = sessionStorage.getItem('token') || localStorage.getItem('token');
-        if (!token || !isAuthenticated) return;
+        if (!isAuthenticated) return;
 
         if (fetchingRef.current) return;
         fetchingRef.current = true;
         setLoading(true);
 
         try {
-            const data = await getUserNotifications(token);
+            const data = await getUserNotifications();
             setNotifications(data);
         } catch (err) {
             console.error('Failed to fetch notifications:', err);
@@ -34,7 +33,7 @@ export const NotificationProvider = ({ children }) => {
         if (!isAuthenticated) return;
 
         fetchNotifications();
-        
+
         let interval;
 
         const startInterval = () => {
@@ -56,7 +55,7 @@ export const NotificationProvider = ({ children }) => {
         };
 
         document.addEventListener('visibilitychange', handleVisibilityChange);
-        
+
         return () => {
             clearInterval(interval);
             document.removeEventListener('visibilitychange', handleVisibilityChange);
@@ -64,16 +63,13 @@ export const NotificationProvider = ({ children }) => {
     }, [fetchNotifications, isAuthenticated]);
 
     const markAsRead = async (notifId) => {
-        const token = sessionStorage.getItem('token') || localStorage.getItem('token');
-        if (!token) return;
-
         // Optimistic UI update
         setNotifications(prev => prev.map(n =>
             n.id === notifId ? { ...n, is_read: true } : n
         ));
 
         try {
-            await markNotificationAsRead(token, notifId);
+            await markNotificationAsRead(notifId);
         } catch (err) {
             console.error('Failed to mark notification as read:', err);
             await fetchNotifications();

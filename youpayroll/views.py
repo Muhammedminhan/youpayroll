@@ -3,8 +3,8 @@ from django.db import connection
 from django.http import HttpResponse, JsonResponse
 from django.views import View
 from graphene_file_upload.django import FileUploadGraphQLView
-from rest_framework.authentication import TokenAuthentication
 from rest_framework.exceptions import AuthenticationFailed
+from youpayroll.authentication import CookieKnoxAuthentication
 
 logger = logging.getLogger(__name__)
 
@@ -49,7 +49,7 @@ class DRFTokenAuthGraphQLView(FileUploadGraphQLView):
         if request.method == 'OPTIONS':
             return super().dispatch(request, *args, **kwargs)
 
-        authenticator = TokenAuthentication()
+        authenticator = CookieKnoxAuthentication()
         try:
             auth_res = authenticator.authenticate(request)
             if auth_res is not None:

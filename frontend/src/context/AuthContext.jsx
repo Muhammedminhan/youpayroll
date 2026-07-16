@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { API_BASE_URL, MEDIA_BASE_URL, googleLoginUser, getProfile } from '../api';
+import { MEDIA_BASE_URL, googleLoginUser, getProfile, logoutUser } from '../api';
 
 const AuthContext = createContext(null);
 
@@ -9,15 +9,22 @@ export const AuthProvider = ({ children }) => {
     const [loading, setLoading] = useState(true);
     const [isDarkMode, setIsDarkMode] = useState(localStorage.getItem('theme') === 'dark');
 
-    const logout = useCallback(() => {
+    const clearLocalAuth = useCallback(() => {
         setUser(null);
         setIsAuthenticated(false);
         localStorage.removeItem('user');
-        localStorage.removeItem('token');
     }, []);
 
-    const updateUserData = useCallback((profileData, token) => {
-        // Construct full URL for profile picture
+    const logout = useCallback(async () => {
+        try {
+            await logoutUser();
+        } catch (_) {
+            // best-effort — clear local state regardless
+        }
+        clearLocalAuth();
+    }, [clearLocalAuth]);
+
+    const updateUserData = useCallback((profileData) => {
         let avatarUrl = profileData.profile_picture;
         if (avatarUrl && !avatarUrl.startsWith('http')) {
             avatarUrl = `${MEDIA_BASE_URL}${avatarUrl}`;
@@ -40,27 +47,24 @@ export const AuthProvider = ({ children }) => {
             consultantFee: profileData.consultant_fee,
             reportingTo: {
                 name: profileData.reporting_to_name,
-                role: profileData.reporting_to_role
+                role: profileData.reporting_to_role,
             },
             bankDetails: {
                 accountNumber: profileData.account_number,
                 ifscCode: profileData.ifsc_code,
                 micrCode: profileData.micr_code,
-                branch_address: profileData.branch_address
-            }
+                branch_address: profileData.branch_address,
+            },
         };
         setUser(userObj);
         setIsAuthenticated(true);
         localStorage.setItem('user', JSON.stringify(userObj));
-        if (token) {
-            localStorage.setItem('token', token);
-        }
     }, []);
 
-    const syncProfile = useCallback(async (token) => {
+    const syncProfile = useCallback(async () => {
         try {
-            const profileData = await getProfile(token);
-            updateUserData(profileData, token);
+            const profileData = await getProfile();
+            updateUserData(profileData);
             return true;
         } catch (error) {
             console.error('Profile sync error:', error);
@@ -68,7 +72,7 @@ export const AuthProvider = ({ children }) => {
         }
     }, [updateUserData]);
 
-    const login = async (email, credential = null) => {
+    const login = async (_email, credential = null) => {
         try {
             let authData;
             if (credential) {
@@ -76,12 +80,9 @@ export const AuthProvider = ({ children }) => {
             } else {
                 throw new Error('Google sign-in is required.');
             }
-
-            if (authData.token) {
-                updateUserData(authData, authData.token);
-                return { success: true };
-            }
-            return { success: false, error: 'Token missing in response' };
+            // Token is delivered as an HttpOnly cookie — no localStorage storage needed.
+            updateUserData(authData);
+            return { success: true };
         } catch (error) {
             console.error('Login error:', error);
             return { success: false, error: error.message };
@@ -97,20 +98,15 @@ export const AuthProvider = ({ children }) => {
                         const parsedUser = JSON.parse(storedUser);
                         setUser(parsedUser);
                         setIsAuthenticated(true);
-
-                        // Background sync with backend
-                        const token = localStorage.getItem('token');
-                        if (token) {
-                            await syncProfile(token);
-                        }
+                        // Validate session is still alive (cookie present + not expired)
+                        const ok = await syncProfile();
+                        if (!ok) clearLocalAuth();
                     } catch (err) {
                         console.error('Failed to parse or sync user:', err);
-                        // Clear corrupted state
-                        logout();
+                        clearLocalAuth();
                     }
                 }
 
-                // Initial Theme Apply
                 if (isDarkMode) {
                     document.body.classList.add('dark-mode');
                 } else {
@@ -122,15 +118,7 @@ export const AuthProvider = ({ children }) => {
         };
 
         initializeAuth();
-
-        const handleStorageChange = (e) => {
-            if (e.key === 'token' && !e.newValue) {
-                logout();
-            }
-        };
-        window.addEventListener('storage', handleStorageChange);
-        return () => window.removeEventListener('storage', handleStorageChange);
-    }, [isDarkMode, logout, syncProfile]);
+    }, [isDarkMode, syncProfile, clearLocalAuth]);
 
     const toggleDarkMode = () => {
         const newMode = !isDarkMode;

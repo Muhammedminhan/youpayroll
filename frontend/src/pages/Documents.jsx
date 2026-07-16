@@ -16,9 +16,8 @@ const Documents = () => {
    const fetchDocuments = async () => {
       setLoading(true);
       try {
-         const token = localStorage.getItem('token');
          const response = await fetch(`${API_BASE_URL}/documents/`, {
-            headers: { 'Authorization': `Token ${token}` }
+            credentials: 'include',
          });
 
          if (response.ok) {
@@ -40,14 +39,11 @@ const Documents = () => {
          return;
       }
 
-      const token = localStorage.getItem('token');
       const baseUrl = MEDIA_BASE_URL;
       const fullUrl = doc.file.startsWith('http') ? doc.file : `${baseUrl}${doc.file}`;
 
       try {
-         const response = await fetch(fullUrl, {
-            headers: { 'Authorization': `Token ${token}` }
-         });
+         const response = await fetch(fullUrl, { credentials: 'include' });
 
          if (!response.ok) throw new Error('Download failed');
 

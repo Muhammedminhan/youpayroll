@@ -255,11 +255,11 @@ const Profile = () => {
 
     const handleSaveProfile = async (updatedData) => {
         setIsSaving(true);
-        const token = localStorage.getItem('token');
         try {
             const response = await fetch(`${API_BASE_URL}/profile/`, {
                 method: 'PATCH',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Token ${token}` },
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(updatedData)
             });
             if (response.ok) {
@@ -271,11 +271,11 @@ const Profile = () => {
 
     const handleRemoveAvatar = async () => {
         setIsSaving(true);
-        const token = localStorage.getItem('token');
         try {
             const response = await fetch(`${API_BASE_URL}/profile/`, {
                 method: 'PATCH',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Token ${token}` },
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ profile_picture: null })
             });
 
@@ -291,11 +291,11 @@ const Profile = () => {
 
     const handleSaveAvatar = async (imageData) => {
         setIsSaving(true);
-        const token = localStorage.getItem('token');
         try {
             const response = await fetch(`${API_BASE_URL}/profile/`, {
                 method: 'PATCH',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Token ${token}` },
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ profile_picture: imageData })
             });
 

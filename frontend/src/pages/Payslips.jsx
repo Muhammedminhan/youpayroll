@@ -41,7 +41,6 @@ const Payslips = () => {
     const fetchPayslips = async () => {
         setLoading(true);
         try {
-            const token = localStorage.getItem('token');
             const startYear = parseInt(selectedYearRange.split('-')[0]);
 
             let url = `${API_BASE_URL}/payslips/?year=${startYear}`;
@@ -49,9 +48,7 @@ const Payslips = () => {
                 url += `&month=${selectedMonth}`;
             }
 
-            const response = await fetch(url, {
-                headers: { 'Authorization': `Token ${token}` }
-            });
+            const response = await fetch(url, { credentials: 'include' });
 
             if (response.ok) {
                 const data = await response.json();
@@ -73,7 +70,6 @@ const Payslips = () => {
             return;
         }
 
-        const token = localStorage.getItem('token');
         const baseUrl = MEDIA_BASE_URL;
         const fullUrl = fileUrl.startsWith('http') ? fileUrl : `${baseUrl}${fileUrl}`;
 
@@ -81,9 +77,7 @@ const Payslips = () => {
             window.open(fullUrl, '_blank');
         } else if (action === 'Download') {
             try {
-                const response = await fetch(fullUrl, {
-                    headers: { 'Authorization': `Token ${token}` }
-                });
+                const response = await fetch(fullUrl, { credentials: 'include' });
                 if (!response.ok) throw new Error('File download failed');
 
                 const blob = await response.blob();

@@ -114,15 +114,9 @@ const Wiki = () => {
 
   const fetchData = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const headers = {};
-      if (token) {
-        headers['Authorization'] = `Token ${token}`;
-      }
-
       const [pagesRes, catsRes] = await Promise.all([
-        fetch(`${API_BASE_URL}/wiki-pages/`, { headers }),
-        fetch(`${API_BASE_URL}/wiki-categories/`, { headers })
+        fetch(`${API_BASE_URL}/wiki-pages/`, { credentials: 'include' }),
+        fetch(`${API_BASE_URL}/wiki-categories/`, { credentials: 'include' })
       ]);
 
       if (pagesRes.ok && catsRes.ok) {
@@ -147,7 +141,6 @@ const Wiki = () => {
     setIsSaving(true);
 
     try {
-      const token = localStorage.getItem('token');
       const isExisting = selectedPage && selectedPage.id && !String(selectedPage.id).includes('local');
 
       const url = isExisting
@@ -155,9 +148,6 @@ const Wiki = () => {
         : `${API_BASE_URL}/wiki-pages/`;
 
       const method = isExisting ? 'PATCH' : 'POST';
-
-      const headers = { 'Content-Type': 'application/json' };
-      if (token) headers['Authorization'] = `Token ${token}`;
 
       const payload = {
         title: editData.title,
@@ -167,7 +157,8 @@ const Wiki = () => {
 
       const response = await fetch(url, {
         method,
-        headers,
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
 

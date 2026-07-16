@@ -64,7 +64,7 @@ INSTALLED_APPS = [
     'allauth.socialaccount.providers.google',
     'core',
     'rest_framework',
-    'rest_framework.authtoken',
+    'knox',
     'corsheaders',
 ]
 
@@ -293,8 +293,7 @@ REST_FRAMEWORK = {
         'rest_framework.permissions.IsAuthenticated',
     ],
     'DEFAULT_AUTHENTICATION_CLASSES': [
-        'rest_framework.authentication.TokenAuthentication',
-        'rest_framework.authentication.SessionAuthentication',
+        'youpayroll.authentication.CookieKnoxAuthentication',
     ],
     'DEFAULT_THROTTLE_CLASSES': [
         'rest_framework.throttling.ScopedRateThrottle',
@@ -304,6 +303,23 @@ REST_FRAMEWORK = {
     },
     'NUM_PROXIES': 0,
 }
+
+from datetime import timedelta
+KNOX_TOKEN_MODEL = 'knox.AuthToken'
+REST_KNOX = {
+    'TOKEN_TTL': timedelta(hours=8),
+    'AUTO_REFRESH': True,
+    'MIN_REFRESH_INTERVAL': 60 * 60,  # refresh at most once per hour
+    'TOKEN_LIMIT_PER_USER': 5,         # cap concurrent sessions
+    'AUTH_HEADER_PREFIX': 'Token',
+    'SECURE_HASH_ALGORITHM': 'hashlib.sha512',
+}
+
+AUTH_COOKIE_NAME = 'auth_token'
+AUTH_COOKIE_HTTPONLY = True
+AUTH_COOKIE_SAMESITE = 'Lax'
+AUTH_COOKIE_PATH = '/'
+AUTH_COOKIE_MAX_AGE = 8 * 60 * 60  # 8 hours, matches TOKEN_TTL
 
 # In Production, these should be True.
 if not DEBUG:
