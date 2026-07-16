@@ -51,7 +51,10 @@ services:
       CELERY_RESULT_BACKEND: ${CELERY_RESULT_BACKEND:-redis://redis:6379/0}
   celery:
     build: .
-    command: celery -A youpayroll worker -l info -B
+    # -B (beat) intentionally excluded — run celery-beat as a separate service
+    # so restarting workers doesn't also restart the scheduler (Celery docs warn
+    # against co-locating beat with a worker in production).
+    command: celery -A youpayroll worker -l info
     volumes:
       - .:/youpayroll
     depends_on:
@@ -61,6 +64,39 @@ services:
       DJANGO_SETTINGS_MODULE: ${DJANGO_SETTINGS_MODULE:-youpayroll.settings.development}
       SECRET_KEY: ${SECRET_KEY:-django-insecure-default-key-for-dev-and-test}
       FIELD_ENCRYPTION_KEY: ${FIELD_ENCRYPTION_KEY:?FIELD_ENCRYPTION_KEY must be set}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      DEBUG: ${DEBUG:-True}
+      DATABASE_ENGINE: ${DATABASE_ENGINE:-django.db.backends.postgresql}
+      DATABASES_NAME: ${DATABASES_NAME:-youpayroll}
+      DATABASES_USER: ${DATABASES_USER:-postgres}
+      DATABASES_PASSWORD: ${DATABASES_PASSWORD:-postgres}
+      DATABASES_HOST: ${DATABASES_HOST:-db}
+      DATABASES_PORT: ${DATABASES_PORT:-5432}
+      AWS_S3_HOST: ${AWS_S3_HOST:-s3.amazonaws.com}
+      AWS_DEFAULT_ACL: ${AWS_DEFAULT_ACL:-private}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+      AWS_STORAGE_BUCKET_NAME: ${AWS_STORAGE_BUCKET_NAME:-dev-bucket}
+      AWS_CLOUDFRONT_DOMAIN: ${AWS_CLOUDFRONT_DOMAIN:-localhost}
+      AWS_S3_REGION_NAME: ${AWS_S3_REGION_NAME:-us-east-1}
+      AWS_QUERYSTRING_AUTH: ${AWS_QUERYSTRING_AUTH:-False}
+      AWS_S3_FILE_OVERWRITE: ${AWS_S3_FILE_OVERWRITE:-False}
+      CELERY_BROKER_URL: ${CELERY_BROKER_URL:-redis://redis:6379/0}
+      CELERY_RESULT_BACKEND: ${CELERY_RESULT_BACKEND:-redis://redis:6379/0}
+
+  celery-beat:
+    build: .
+    command: celery -A youpayroll beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler
+    volumes:
+      - .:/youpayroll
+    depends_on:
+      - web
+      - redis
+    environment:
+      DJANGO_SETTINGS_MODULE: ${DJANGO_SETTINGS_MODULE:-youpayroll.settings.development}
+      SECRET_KEY: ${SECRET_KEY:-django-insecure-default-key-for-dev-and-test}
+      FIELD_ENCRYPTION_KEY: ${FIELD_ENCRYPTION_KEY:?FIELD_ENCRYPTION_KEY must be set}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
       DEBUG: ${DEBUG:-True}
       DATABASE_ENGINE: ${DATABASE_ENGINE:-django.db.backends.postgresql}
       DATABASES_NAME: ${DATABASES_NAME:-youpayroll}

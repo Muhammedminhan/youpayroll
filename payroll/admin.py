@@ -34,7 +34,7 @@ class PaymentAdmin(admin.ModelAdmin):
 class PayRunAdmin(admin.ModelAdmin):
     list_display = ('display_month_name', 'year', 'status', 'created_by')
     list_filter = ('status', 'month', 'year')
-    search_fields = ('status', 'get_month_name', 'year')
+    search_fields = ('status', 'month', 'year')
     readonly_fields = ('status', 'created_at','error_log_summary')
     ordering = ['-year', '-month', '-created_at']
     actions = ['run_payrun', 'approve_payrun', 'reject_payrun']

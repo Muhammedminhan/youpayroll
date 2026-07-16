@@ -5,7 +5,6 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
-from django.views.decorators.csrf import csrf_exempt
 from youpayroll.schema import schema
 from .views import LivenessCheck, ReadinessCheck, LegacyHealthCheck, DRFTokenAuthGraphQLView
 
@@ -21,10 +20,11 @@ urlpatterns = [
     # Legacy Health Path (compatible with existing Helm/Ingress configs)
     path('health/', LegacyHealthCheck.as_view(), name='health_legacy'),
     
-    # GraphQL - csrf_exempt is used because authentication is strictly Token-based (stateless API).
-    # We bypass SessionAuthentication on the custom view to ensure CSRF is not applicable.
-    path('graphql/', csrf_exempt(DRFTokenAuthGraphQLView.as_view(graphiql=getattr(settings, 'ENABLE_GRAPHIQL', False),
-                                                                schema=schema))),
+    # GraphQL — no csrf_exempt. DRFTokenAuthGraphQLView enforces CookieKnoxAuthentication
+    # which handles CSRF itself (enforced for unsafe methods when cookie auth is used,
+    # skipped for Authorization-header clients that cannot be targeted cross-site).
+    path('graphql/', DRFTokenAuthGraphQLView.as_view(graphiql=getattr(settings, 'ENABLE_GRAPHIQL', False),
+                                                     schema=schema)),
     path('accounts/', include('allauth.urls')),
     path('api/', include('core.urls')),
     path('api/payees/', include('payees.urls')),
