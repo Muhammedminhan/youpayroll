@@ -2,6 +2,8 @@ from rest_framework import viewsets, generics, permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from django.conf import settings
+from django.utils.decorators import method_decorator
+from django.views.decorators.csrf import ensure_csrf_cookie
 from google.oauth2 import id_token
 from google.auth.transport import requests as google_requests
 import base64
@@ -123,6 +125,7 @@ class DocumentViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
 
+@method_decorator(ensure_csrf_cookie, name='dispatch')
 class GoogleLoginView(APIView):
     permission_classes = [permissions.AllowAny]
     throttle_scope = 'google_login'
@@ -253,12 +256,21 @@ class WikiPageViewSet(viewsets.ModelViewSet):
         serializer.save(author=author, slug=slug)
 
 
+@method_decorator(ensure_csrf_cookie, name='dispatch')
+class CsrfCookieView(APIView):
+    permission_classes = [permissions.AllowAny]
+    authentication_classes = []
+
+    def get(self, request):
+        return Response({'detail': 'CSRF cookie set'})
+
+
 class LogoutView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request):
-        # Invalidate the current Knox token server-side
-        request.auth.delete()
+        if request.auth and hasattr(request.auth, 'delete'):
+            request.auth.delete()
         response = Response(status=status.HTTP_204_NO_CONTENT)
         response.delete_cookie(
             settings.AUTH_COOKIE_NAME,

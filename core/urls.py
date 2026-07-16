@@ -5,7 +5,7 @@ from .views import (
     BankDetailsView,
     DocumentViewSet, AdminNotificationView,
     WikiCategoryViewSet, WikiPageViewSet, UserNotificationViewSet,
-    GoogleLoginView, LogoutView,
+    GoogleLoginView, LogoutView, CsrfCookieView,
 )
 
 router = DefaultRouter()
@@ -20,6 +20,7 @@ urlpatterns = [
     path('bank-details/', BankDetailsView.as_view(), name='bank_details'),
     path('google-login/', GoogleLoginView.as_view(), name='google_login'),
     path('logout/', LogoutView.as_view(), name='logout'),
+    path('csrf/', CsrfCookieView.as_view(), name='csrf'),
     path('notifications/', AdminNotificationView.as_view(), name='notifications'),
     path('', include(router.urls)),
 ]

@@ -73,27 +73,26 @@ const Payslips = () => {
         const baseUrl = MEDIA_BASE_URL;
         const fullUrl = fileUrl.startsWith('http') ? fileUrl : `${baseUrl}${fileUrl}`;
 
-        if (action === 'View') {
-            window.open(fullUrl, '_blank');
-        } else if (action === 'Download') {
-            try {
-                const response = await fetch(fullUrl, { credentials: 'include' });
-                if (!response.ok) throw new Error('File download failed');
-
-                const blob = await response.blob();
-                const url = window.URL.createObjectURL(blob);
-                const link = document.createElement('a');
-                link.href = url;
+        // Both View and Download use authenticated fetch to prevent direct URL access
+        try {
+            const response = await fetch(fullUrl, { credentials: 'include' });
+            if (!response.ok) throw new Error('File fetch failed');
+            const blob = await response.blob();
+            const blobUrl = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = blobUrl;
+            if (action === 'Download') {
                 link.setAttribute('download', fileName || 'document.pdf');
-                document.body.appendChild(link);
-                link.click();
-                link.remove();
-                window.URL.revokeObjectURL(url);
-            } catch (err) {
-                console.error('Download error:', err);
-                // Fallback to direct link if fetch fails
-                window.open(fullUrl, '_blank');
+            } else {
+                link.target = '_blank';
+                link.rel = 'noopener noreferrer';
             }
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            window.URL.revokeObjectURL(blobUrl);
+        } catch (err) {
+            console.error('File action error:', err);
         }
     };
 

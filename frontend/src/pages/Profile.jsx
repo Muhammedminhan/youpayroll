@@ -253,13 +253,18 @@ const Profile = () => {
         }
     }, [user]);
 
+    const getCsrfToken = () => {
+        const match = document.cookie.match(/(?:^|;\s*)csrftoken=([^;]+)/);
+        return match ? decodeURIComponent(match[1]) : '';
+    };
+
     const handleSaveProfile = async (updatedData) => {
         setIsSaving(true);
         try {
             const response = await fetch(`${API_BASE_URL}/profile/`, {
                 method: 'PATCH',
                 credentials: 'include',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
                 body: JSON.stringify(updatedData)
             });
             if (response.ok) {
@@ -275,7 +280,7 @@ const Profile = () => {
             const response = await fetch(`${API_BASE_URL}/profile/`, {
                 method: 'PATCH',
                 credentials: 'include',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
                 body: JSON.stringify({ profile_picture: null })
             });
 
@@ -295,7 +300,7 @@ const Profile = () => {
             const response = await fetch(`${API_BASE_URL}/profile/`, {
                 method: 'PATCH',
                 credentials: 'include',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
                 body: JSON.stringify({ profile_picture: imageData })
             });
 

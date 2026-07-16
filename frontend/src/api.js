@@ -14,11 +14,26 @@ const defaultOptions = {
     credentials: 'include',
 };
 
+// Read the csrftoken cookie set by Django (it is NOT HttpOnly).
+function getCsrfToken() {
+    const match = document.cookie.match(/(?:^|;\s*)csrftoken=([^;]+)/);
+    return match ? decodeURIComponent(match[1]) : '';
+}
+
+// Returns extra headers needed for unsafe (state-changing) requests.
+function csrfHeaders() {
+    return { 'X-CSRFToken': getCsrfToken() };
+}
+
+// Fetch the CSRF cookie from the backend on app start so unsafe requests work.
+export const bootstrapCsrf = () =>
+    fetch(`${API_URL}/csrf/`, { ...defaultOptions }).catch(() => {});
+
 export const googleLoginUser = async (credential) => {
     const response = await fetch(`${API_URL}/google-login/`, {
         ...defaultOptions,
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...csrfHeaders() },
         body: JSON.stringify({ credential }),
     });
     if (!response.ok) {
@@ -32,6 +47,7 @@ export const logoutUser = async () => {
     const response = await fetch(`${API_URL}/logout/`, {
         ...defaultOptions,
         method: 'POST',
+        headers: { ...csrfHeaders() },
     });
     // 204 No Content on success; ignore non-ok (session may already be gone)
     return response.ok || response.status === 401;
@@ -59,6 +75,7 @@ export const uploadDocument = async (formData) => {
     const response = await fetch(`${API_URL}/documents/`, {
         ...defaultOptions,
         method: 'POST',
+        headers: { ...csrfHeaders() },
         body: formData,
     });
     if (!response.ok) {
@@ -81,7 +98,7 @@ export const markNotificationAsRead = async (notifId) => {
     const response = await fetch(`${API_URL}/user-notifications/${notifId}/`, {
         ...defaultOptions,
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...csrfHeaders() },
         body: JSON.stringify({ is_read: true }),
     });
     if (!response.ok) {
@@ -95,7 +112,7 @@ export const updateProfile = async (data) => {
     const response = await fetch(`${API_URL}/profile/`, {
         ...defaultOptions,
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...csrfHeaders() },
         body: JSON.stringify(data),
     });
     if (!response.ok) {

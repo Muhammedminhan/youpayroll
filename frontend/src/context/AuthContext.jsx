@@ -1,5 +1,8 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { MEDIA_BASE_URL, googleLoginUser, getProfile, logoutUser } from '../api';
+
+// Cross-tab logout synchronisation
+const logoutChannel = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('auth_logout') : null;
 
 const AuthContext = createContext(null);
 
@@ -13,6 +16,7 @@ export const AuthProvider = ({ children }) => {
         setUser(null);
         setIsAuthenticated(false);
         localStorage.removeItem('user');
+        logoutChannel?.postMessage('logout');
     }, []);
 
     const logout = useCallback(async () => {
@@ -34,11 +38,17 @@ export const AuthProvider = ({ children }) => {
         const lastName = profileData.user?.last_name || '';
         const fullName = `${firstName} ${lastName}`.trim();
 
-        const userObj = {
+        // Only non-sensitive display fields go into localStorage.
+        // Sensitive fields (bank details, compensation) are kept in memory only.
+        const storableObj = {
             email: profileData.user?.email,
             name: fullName || profileData.user?.username || 'User',
             role: profileData.designation || 'Consultant',
             avatar: avatarUrl || `https://ui-avatars.com/api/?name=${firstName || 'User'}+${lastName}&background=B800C4&color=fff`,
+        };
+
+        const userObj = {
+            ...storableObj,
             consultantId: profileData.consultant_id,
             gender: profileData.gender,
             dob: profileData.dob,
@@ -49,6 +59,7 @@ export const AuthProvider = ({ children }) => {
                 name: profileData.reporting_to_name,
                 role: profileData.reporting_to_role,
             },
+            // Bank details held in memory only — not persisted to localStorage
             bankDetails: {
                 accountNumber: profileData.account_number,
                 ifscCode: profileData.ifsc_code,
@@ -58,7 +69,7 @@ export const AuthProvider = ({ children }) => {
         };
         setUser(userObj);
         setIsAuthenticated(true);
-        localStorage.setItem('user', JSON.stringify(userObj));
+        localStorage.setItem('user', JSON.stringify(storableObj));
     }, []);
 
     const syncProfile = useCallback(async () => {
@@ -118,6 +129,13 @@ export const AuthProvider = ({ children }) => {
         };
 
         initializeAuth();
+
+        // Sync logout across tabs
+        const handleCrossTabLogout = (e) => {
+            if (e.data === 'logout') clearLocalAuth();
+        };
+        logoutChannel?.addEventListener('message', handleCrossTabLogout);
+        return () => logoutChannel?.removeEventListener('message', handleCrossTabLogout);
     }, [isDarkMode, syncProfile, clearLocalAuth]);
 
     const toggleDarkMode = () => {

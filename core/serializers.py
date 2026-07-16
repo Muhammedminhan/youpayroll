@@ -107,12 +107,15 @@ class PayslipSerializer(serializers.ModelSerializer):
     def get_ifsc_code(self, obj):
         from payees.models import BankDetails
         bank_detail = BankDetails.objects.filter(payee__user=obj.user).first()
-        return bank_detail.ifsc_code if bank_detail else ''
+        if not bank_detail or not bank_detail.ifsc_code:
+            return ''
+        code = bank_detail.ifsc_code
+        # Mask all but last 4 characters
+        return f"{'*' * (len(code) - 4)}{code[-4:]}" if len(code) > 4 else '****'
 
     def get_branch_address(self, obj):
-        from payees.models import BankDetails
-        bank_detail = BankDetails.objects.filter(payee__user=obj.user).first()
-        return bank_detail.branch_address if bank_detail else ''
+        # Branch address is not needed on the client; return empty to avoid PII in browser
+        return ''
 
 
 class BankDetailsSerializer(serializers.ModelSerializer):
