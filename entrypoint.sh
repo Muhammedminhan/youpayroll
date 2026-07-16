@@ -27,6 +27,12 @@ if [ "$DATABASE" = "postgres" ] || echo "$DATABASE_ENGINE" | grep -iq "postgres"
 
     echo "Waiting for PostgreSQL at $DATABASES_HOST:$DATABASES_PORT..."
 
+    if ! command -v nc >/dev/null 2>&1; then
+        echo "ERROR: 'nc' (netcat) is not installed. Cannot wait for PostgreSQL." >&2
+        echo "Install netcat in your Docker image (e.g. apk add netcat-openbsd)." >&2
+        exit 1
+    fi
+
     # Loop until PostgreSQL is ready to accept connections or timeout is reached (60 seconds)
     timeout=60
     counter=0

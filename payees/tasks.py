@@ -56,9 +56,14 @@ def fetch_details(payee_id):
                 updated_fields.append('email')
                 
             pan = fetched_data.get("Pan_Number")
+            # EncryptedCharField reads back as decrypted plaintext, so the
+            # comparison with the Zoho string is correct despite the field type.
             if pan and payee.pan_no != pan:
                 payee.pan_no = pan
-                updated_fields.append('pan_no')
+                # pan_no_hash is computed in Payee.save() before super().save(),
+                # but update_fields restricts which columns Django writes.
+                # Include pan_no_hash explicitly so the hash stays in sync.
+                updated_fields.extend(['pan_no', 'pan_no_hash'])
                 
             addr = fetched_data.get("Permanent_Address")
             if addr and payee.address != addr:

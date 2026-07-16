@@ -41,6 +41,12 @@ def generate_access_token(force=False):
         logger.error("No refresh token found in database.")
         return None
 
+    # Outer (unguarded) freshness check — performance optimisation only.
+    # This read is intentionally not under a lock: two workers may both pass
+    # this check and both enter the transaction below. That is safe because the
+    # inner select_for_update() re-check is the authoritative guard that prevents
+    # a double-refresh. The outer check just avoids acquiring the DB lock on the
+    # common "token is still fresh" path.
     if not force and token_obj.access_token and token_obj.last_refreshed_at:
         if (timezone.now() - token_obj.last_refreshed_at).total_seconds() < 300:
             logger.info("Token was recently refreshed. Skipping network call.")
@@ -49,8 +55,9 @@ def generate_access_token(force=False):
     try:
         with transaction.atomic():
             locked_token = ZohoPeopleFormToken.objects.select_for_update().get(pk=token_obj.pk)
-            
-            # 2. Re-verify freshness under the lock to prevent concurrent thundering herd calls
+
+            # Authoritative re-check under the lock — prevents concurrent workers
+            # from both passing the outer check and both calling the Zoho API.
             if not force and locked_token.access_token and locked_token.last_refreshed_at:
                 if (timezone.now() - locked_token.last_refreshed_at).total_seconds() < 300:
                     logger.info("Token was refreshed by another worker. Skipping network call.")

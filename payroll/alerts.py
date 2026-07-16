@@ -52,8 +52,19 @@ def reject_payrun_action(modeladmin, request, queryset):
                            latest_payrun) == False:
         return
 
+    if latest_payrun.status == PayRunStatusChoices.APPROVED:
+        # APPROVED is a terminal state — downstream actions (payslips, payments)
+        # may already have been triggered. Rejection from APPROVED is blocked here;
+        # a dedicated super-user action with an audit trail is required instead.
+        modeladmin.message_user(
+            request,
+            "An APPROVED pay run cannot be rejected. It is a terminal state. "
+            "Contact a system administrator if a reversal is required.",
+            level=messages.ERROR,
+        )
+        return
+
     if latest_payrun.status in [PayRunStatusChoices.COMPLETED,
-                                PayRunStatusChoices.APPROVED,
                                 PayRunStatusChoices.IN_PROGRESS,
                                 PayRunStatusChoices.DUE]:
 
@@ -65,7 +76,7 @@ def reject_payrun_action(modeladmin, request, queryset):
     else:
         modeladmin.message_user(request,
                                 "Entries can only be rejected if their status "
-                                "is 'Completed', 'Approved' or 'Due'. ",
+                                "is 'Completed' or 'Due'.",
                                 level=messages.ERROR)
 
 
@@ -148,9 +159,9 @@ def is_payrun_exists(request):
         ]
         if latest_payrun.status in conflicting_statuses:
             messages.error(request, (
-                f"A Pay Run already exists with the status "
-                f"'{latest_payrun.get_status_display()}'. "
-                "Please finish the existing Pay Run before creating a new one."
+                f"A Pay Run for {latest_payrun.get_month_name()} {latest_payrun.year} "
+                f"already exists with the status '{latest_payrun.get_status_display()}'. "
+                "Please finish that Pay Run before creating a new one."
             ))
             return True
     return False

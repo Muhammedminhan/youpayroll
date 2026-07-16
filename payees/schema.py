@@ -32,9 +32,25 @@ class PayeeType(DjangoObjectType):
 
 class BankDetailsType(DjangoObjectType):
     account_no = graphene.String()
+    ifsc_code = graphene.String()
+    micr_code = graphene.String()
+    swift_code = graphene.String()
+    branch_address = graphene.String()
 
     def resolve_account_no(self, info):
         return self.masked_account_no
+
+    def resolve_ifsc_code(self, info):
+        return '****' if self.ifsc_code else ''
+
+    def resolve_micr_code(self, info):
+        return '****' if self.micr_code else ''
+
+    def resolve_swift_code(self, info):
+        return '****' if self.swift_code else ''
+
+    def resolve_branch_address(self, info):
+        return '****' if self.branch_address else ''
 
     class Meta:
         """

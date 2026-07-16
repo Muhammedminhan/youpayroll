@@ -73,7 +73,7 @@ class PayeeAdmin(admin.ModelAdmin):
         qs = queryset.filter(is_deleted=False)
 
         if request.user.is_superuser:
-            return restrict_queryset_by_group(qs, request.user)
+            return qs
 
         return restrict_queryset_by_group(qs, request.user)
 
