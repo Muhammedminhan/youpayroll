@@ -132,7 +132,7 @@ class GoogleLoginView(APIView):
     throttle_scope = 'google_login'
 
     def post(self, request):
-        logger.debug(f"GoogleLoginView.post data: {request.data}")
+        logger.debug("GoogleLoginView.post email=%s", request.data.get('email'))
         credential = request.data.get('credential')
         if not credential:
             logger.debug("Credential missing in request data")
@@ -163,19 +163,31 @@ class GoogleLoginView(APIView):
 
             user = User.objects.filter(email__iexact=email).first()
             if user is None:
-                # auto-creation behavior
                 username = email.split('@')[0]
-                # Ensure unique username
                 if User.objects.filter(username=username).exists():
                     username = f"{username}_{uuid.uuid4().hex[:4]}"
                 user = User(
                     email=email,
                     username=username,
                     first_name=idinfo.get('given_name', ''),
-                    last_name=idinfo.get('family_name', '')
+                    last_name=idinfo.get('family_name', ''),
+                    is_active=False,
                 )
                 user.set_unusable_password()
                 user.save()
+                logger.warning(
+                    "Auto-provisioned inactive account for %s — HR must activate via Zoho sync before first login.",
+                    email,
+                )
+                return Response(
+                    {'error': 'Your account is pending HR activation. Please contact your administrator.'},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
+            if not user.is_active:
+                return Response(
+                    {'error': 'Your account is inactive. Please contact your administrator.'},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
             elif user.email != email:
                 user.email = email
                 user.save(update_fields=['email'])
